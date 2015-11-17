@@ -10,6 +10,7 @@ depends:
 	$(GO) get github.com/gorilla/mux
 	$(GO) get code.google.com/p/go-uuid/uuid
 	$(GO) get github.com/jvehent/gozdef
+	$(GO) get github.com/oschwald/geoip2-golang
 
 geomodel:
 	$(GO) install geomodel
