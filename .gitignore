@@ -3,3 +3,4 @@ src/code.google.com/
 bin/
 pkg/
 sample.json
+*.mmdb
