@@ -69,6 +69,10 @@ func queryUsingPlugin(p plugin, req queryRequest) (err error) {
 	}
 	logf("plugin %v returned %v hits", p.name, res.Hits.Len())
 
+	if res.Hits.Len() == 0 {
+		return nil
+	}
+
 	pluginInput, err := pluginRequestDataFromES(res)
 	if err != nil {
 		panic(err)
