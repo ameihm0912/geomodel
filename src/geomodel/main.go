@@ -71,6 +71,7 @@ func logger() {
 func main() {
 	var delIndex = flag.Bool("D", false, "delete and recreate state index on startup")
 	var confPath = flag.String("f", "etc/geomodel.conf", "configuration path")
+	var initOff = flag.Int("o", 0, "initial state offset in seconds")
 	flag.Parse()
 
 	err := cfg.loadConfiguration(*confPath)
@@ -79,6 +80,7 @@ func main() {
 		os.Exit(2)
 	}
 	cfg.deleteStateIndex = *delIndex
+	cfg.initialOffset = *initOff
 
 	// Initialize the logging routine
 	var wg sync.WaitGroup

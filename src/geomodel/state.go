@@ -37,6 +37,9 @@ func (s *procState) toObject() (o object, err error) {
 
 func (s *procState) newState() {
 	s.timeEndpoint = time.Now().UTC()
+	if cfg.initialOffset != 0 {
+		s.timeEndpoint = s.timeEndpoint.Add(-1 * time.Duration(cfg.initialOffset) * time.Second)
+	}
 }
 
 var state procState
