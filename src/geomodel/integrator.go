@@ -8,6 +8,9 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
+	elastigo "github.com/mattbaird/elastigo/lib"
 	"sync"
 	"time"
 )
@@ -37,8 +40,80 @@ func (i *integQueue) addResult(n eventResult) {
 	i.Unlock()
 }
 
-func mergeResults(principal string, res []eventResult) {
+func mergeResults(principal string, res []eventResult) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("mergeResults() -> %v", e)
+		}
+	}()
+
 	logf("merging and updating for %v", principal)
+	o, err := getPrincipalState(principal)
+	if err != nil {
+		panic(err)
+	}
+
+	err = savePrincipalState(o)
+	if err != nil {
+		panic(err)
+	}
+
+	return nil
+}
+
+func savePrincipalState(o object) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("savePrincipalState() -> %v", e)
+		}
+	}()
+
+	conn := elastigo.NewConn()
+	conn.Domain = cfg.ES.StateESHost
+
+	_, err = conn.Index(cfg.ES.StateIndex, "geomodel_state", o.ObjectID, nil, o)
+	if err != nil {
+		panic(err)
+	}
+
+	return nil
+}
+
+func getPrincipalState(principal string) (ret object, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("getPrincipalState() -> %v", e)
+		}
+	}()
+
+	objid := getObjectID(principal)
+
+	conn := elastigo.NewConn()
+	conn.Domain = cfg.ES.StateESHost
+
+	template := `{
+		"query": {
+			"term": {
+				"object_id": "%v"
+			}
+		}
+	}`
+	tempbuf := fmt.Sprintf(template, objid)
+	res, err := conn.Search(cfg.ES.StateIndex, "geomodel_state", nil, tempbuf)
+	if err != nil {
+		panic(err)
+	}
+	if res.Hits.Len() == 0 {
+		logf("no state found for %v, creating", principal)
+		ret.newFromPrincipal(principal)
+		return ret, nil
+	}
+	err = json.Unmarshal(*res.Hits.Hits[0].Source, &ret)
+	if err != nil {
+		panic(err)
+	}
+
+	return ret, nil
 }
 
 func integrationMerge(exitCh chan bool) {
@@ -71,8 +146,17 @@ func integrationMerge(exitCh chan bool) {
 			ptr = append(ptr, e)
 			princemap[e.Principal] = ptr
 		}
+		failed := false
+		var err error
 		for k, v := range princemap {
-			mergeResults(k, v)
+			err = mergeResults(k, v)
+			if err != nil {
+				failed = true
+				break
+			}
+		}
+		if failed {
+			logf("integration merge failed, %v", err)
 		}
 	}
 }
