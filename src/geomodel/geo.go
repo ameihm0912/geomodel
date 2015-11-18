@@ -12,41 +12,11 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	geo "github.com/oschwald/geoip2-golang"
 	"math"
 	"net"
-	"os"
-	"regexp"
-	"strconv"
-	"time"
 )
-
-type Traveler struct {
-	ID            string     `json:"id"`
-	Geocenter     Geocenter  `json:"geocenter,omitempty"`
-	Locations     []Location `json:"locations,omitempty"`
-	Alerts        []string   `json:"alerts"`
-	AlertDistance float64    `json:"alert_dist"`
-}
-
-type Geocenter struct {
-	Latitude  float64 `json:"latitude,omitempty"`
-	Longitude float64 `json:"longitude,omitempty"`
-	Weight    float64 `json:"weight,omitempty"`
-	Locality  string  `json:"locality,omitempty"`
-	AvgDist   float64 `json:"avg_dist, omitempty"`
-}
-
-type Location struct {
-	IP        string    `json:"ip,omitempty"`
-	Date      time.Time `json:"date,omitempty"`
-	Latitude  float64   `json:"latitude,omitempty"`
-	Longitude float64   `json:"longitude,omitempty"`
-	Weight    float64   `json:"weight,omitempty"`
-	Locality  string    `json:"locality,omitempty"`
-}
 
 var maxmind *geo.Reader
 
@@ -73,15 +43,16 @@ func geoObjectResult(o *objectResult) (err error) {
 	o.Latitude = record.Location.Latitude
 	o.Longitude = record.Location.Longitude
 	o.Locality = record.City.Names["en"] + ", " + record.Country.Names["en"]
+	o.Weight = 1
 
 	return nil
 }
 
-func find_geocenter(tvl Traveler, gk string) (gc Geocenter, err error) {
+func geoFindGeocenter(o object) (gc objectGeocenter, err error) {
 	var lat, lon_gw, lon_dl float64
 	// First pass: calculate two geocenters: one on the greenwich meridian
 	// and one of the dateline meridian
-	for _, loc := range tvl.Locations {
+	for _, loc := range o.Results {
 		lat += (loc.Latitude * loc.Weight)
 		lon_gw += (loc.Longitude * loc.Weight)
 		lon_dl += (switch_meridians(loc.Longitude) * loc.Weight)
@@ -96,7 +67,7 @@ func find_geocenter(tvl Traveler, gk string) (gc Geocenter, err error) {
 	// meridian and the dateline meridian. The average distance that is the
 	// shortest indicates which meridian is appropriate to use.
 	var dist_to_gw, avg_dist_to_gw, dist_to_dl, avg_dist_to_dl float64
-	for _, loc := range tvl.Locations {
+	for _, loc := range o.Results {
 		dist_to_gw = km_between_two_points(loc.Latitude, loc.Longitude, lat, lon_gw)
 		avg_dist_to_gw += (dist_to_gw * loc.Weight)
 		dist_to_dl = km_between_two_points(loc.Latitude, loc.Longitude, lat, lon_dl)
@@ -114,7 +85,7 @@ func find_geocenter(tvl Traveler, gk string) (gc Geocenter, err error) {
 		gc.AvgDist = avg_dist_to_gw
 	}
 	gc.Latitude = lat
-	return
+	return gc, nil
 }
 
 // haversin(θ) function

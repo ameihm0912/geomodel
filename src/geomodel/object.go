@@ -17,11 +17,12 @@ import (
 // or it could be a global state object. We use the same structure for
 // both.
 type object struct {
-	ObjectID       string         `json:"object_id"`
-	ObjectIDString string         `json:"object_id_string"`
-	Context        string         `json:"context"`
-	State          objectState    `json:"state,omitempty"`
-	Results        []objectResult `json:"results,omitempty"`
+	ObjectID       string          `json:"object_id"`
+	ObjectIDString string          `json:"object_id_string"`
+	Context        string          `json:"context"`
+	State          objectState     `json:"state,omitempty"`
+	Results        []objectResult  `json:"results,omitempty"`
+	Geocenter      objectGeocenter `json:"geocenter"`
 }
 
 func (o *object) addEventResult(e eventResult) (err error) {
@@ -43,6 +44,12 @@ func (o *object) addEventResult(e eventResult) (err error) {
 	}
 	o.Results = append(o.Results, newres)
 
+	// Geocenter calculation
+	o.Geocenter, err = geoFindGeocenter(*o)
+	if err != nil {
+		panic(err)
+	}
+
 	return nil
 }
 
@@ -57,10 +64,20 @@ type objectState struct {
 	TimeEndpoint time.Time `json:"time_endpoint,omitempty"`
 }
 
+// Principal geocenter
+type objectGeocenter struct {
+	Latitude  float64 `json:"latitude,omitempty"`
+	Longitude float64 `json:"longitude,omitempty"`
+	Locality  string  `json:"locality,omitempty"`
+	AvgDist   float64 `json:"avg_dist,omitempty"`
+	Weight    float64 `json:"weight"`
+}
+
 // Single authentication result for a principal
 type objectResult struct {
 	Latitude   float64 `json:"latitude"`
 	Longitude  float64 `json:"longitude"`
 	Locality   string  `json:"locality"`
 	SourceIPV4 string  `json:"source_ipv4"`
+	Weight     float64 `json:"weight"`
 }
