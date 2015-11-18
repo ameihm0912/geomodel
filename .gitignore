@@ -4,3 +4,4 @@ bin/
 pkg/
 sample.json
 *.mmdb
+*.swp
