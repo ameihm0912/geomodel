@@ -163,6 +163,10 @@ func integrationMerge(exitCh chan bool) {
 
 func integrate(pr pluginResult) {
 	for _, x := range pr.Results {
+		if !x.Valid {
+			logf("ignoring invalid result from plugin")
+			continue
+		}
 		queue.addResult(x)
 	}
 }
