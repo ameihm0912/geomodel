@@ -102,6 +102,12 @@ func main() {
 		logger()
 	}()
 
+	err = maxmindInit()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error initializing maxmind: %v\n", err)
+		os.Exit(2)
+	}
+
 	err = loadPlugins()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error loading plugins: %v\n", err)

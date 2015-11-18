@@ -48,6 +48,35 @@ type Location struct {
 	Locality  string    `json:"locality,omitempty"`
 }
 
+var maxmind *geo.Reader
+
+func maxmindInit() (err error) {
+	maxmind, err = geo.Open(cfg.General.MaxMind)
+	if err != nil {
+		return err
+	}
+	logf("initialized maxmind db")
+	return nil
+}
+
+func geoObjectResult(o *objectResult) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("geoObjectResult() -> %v", e)
+		}
+	}()
+
+	record, err := maxmind.City(net.ParseIP(o.SourceIPV4))
+	if err != nil {
+		panic(err)
+	}
+	o.Latitude = record.Location.Latitude
+	o.Longitude = record.Location.Longitude
+	o.Locality = record.City.Names["en"] + ", " + record.Country.Names["en"]
+
+	return nil
+}
+
 func parse_travelers_logs(src string, maxmind *geo.Reader) (travelers map[string]Traveler, err error) {
 	defer func() {
 		if e := recover(); e != nil {

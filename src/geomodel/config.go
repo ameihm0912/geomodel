@@ -23,6 +23,7 @@ type Config struct {
 	General struct {
 		Context string // Context name
 		Plugins string // Plugin directory path
+		MaxMind string // Path to MaxMind DB
 	}
 
 	Timer struct {
@@ -57,6 +58,9 @@ func (c *Config) validate() error {
 	}
 	if c.General.Plugins == "" {
 		return fmt.Errorf("general..plugins must be set")
+	}
+	if c.General.MaxMind == "" {
+		return fmt.Errorf("general..maxmind must be set")
 	}
 	if c.Timer.State < 10 {
 		return fmt.Errorf("timer..state must be >= 10")

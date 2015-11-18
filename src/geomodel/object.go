@@ -8,6 +8,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -21,6 +22,28 @@ type object struct {
 	Context        string         `json:"context"`
 	State          objectState    `json:"state,omitempty"`
 	Results        []objectResult `json:"results,omitempty"`
+}
+
+func (o *object) addEventResult(e eventResult) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("addEventResult() -> %v", e)
+		}
+	}()
+
+	if !e.Valid {
+		panic("invalid result")
+	}
+
+	newres := objectResult{}
+	newres.SourceIPV4 = e.SourceIPV4
+	err = geoObjectResult(&newres)
+	if err != nil {
+		panic(err)
+	}
+	o.Results = append(o.Results, newres)
+
+	return nil
 }
 
 func (o *object) newFromPrincipal(principal string) {

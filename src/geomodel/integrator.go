@@ -53,6 +53,14 @@ func mergeResults(principal string, res []eventResult) (err error) {
 		panic(err)
 	}
 
+	// Add the new event information to the object
+	for _, x := range res {
+		err = o.addEventResult(x)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	err = savePrincipalState(o)
 	if err != nil {
 		panic(err)
