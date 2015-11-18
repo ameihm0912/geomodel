@@ -11,6 +11,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"sync"
 	"time"
 )
@@ -35,6 +36,16 @@ func startRoutines() {
 		stateExitCh <- true
 		queryExitCh <- true
 		integExitCh <- true
+	}()
+
+	// Install signal handler
+	sigch := make(chan os.Signal, 1)
+	signal.Notify(sigch, os.Interrupt)
+	go func() {
+		for _ = range sigch {
+			logf("caught signal, attempting to exit")
+			exitNotifyCh <- true
+		}
 	}()
 
 	wg.Add(1)

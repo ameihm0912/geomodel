@@ -11,6 +11,14 @@ func integrate(pr pluginResult) {
 }
 
 func integrator(exitCh chan bool, notifyCh chan bool) {
+	defer func() {
+		if e := recover(); e != nil {
+			logf("integrator() -> %v", e)
+		}
+		logf("integrator exiting")
+	}()
+	logf("integrator started")
+
 	for {
 		select {
 		case p := <-pluginResultCh:

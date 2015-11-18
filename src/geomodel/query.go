@@ -103,6 +103,14 @@ func handleQueryRequest(q queryRequest) {
 }
 
 func queryHandler(exitCh chan bool, notifyCh chan bool) {
+	defer func() {
+		if e := recover(); e != nil {
+			logf("queryHandler() -> %v", e)
+		}
+		logf("query handler exiting")
+	}()
+	logf("query handler started")
+
 	for {
 		select {
 		case qr := <-queryRequestCh:
