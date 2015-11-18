@@ -28,6 +28,7 @@ type Config struct {
 	Timer struct {
 		State          int // State interval in seconds
 		MaxQueryWindow int // Maximum query window in seconds
+		Merge          int // Merge interval in seconds
 	}
 
 	// Not expected to be in the configuration file, but other options we
