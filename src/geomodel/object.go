@@ -56,6 +56,10 @@ func (o *object) newFromPrincipal(principal string) {
 	o.Context = cfg.General.Context
 }
 
+func (o *object) alertAnalyze() error {
+	return nil
+}
+
 // Specific to global state tracking
 type objectState struct {
 	TimeEndpoint time.Time `json:"time_endpoint,omitempty"`

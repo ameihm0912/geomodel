@@ -53,7 +53,7 @@ func mergeResults(principal string, res []eventResult) (err error) {
 		panic(err)
 	}
 
-	// Phase one, add new events to the object state
+	// Add new events to the object state
 	for _, x := range res {
 		err = o.addEventResult(x)
 		if err != nil {
@@ -61,14 +61,21 @@ func mergeResults(principal string, res []eventResult) (err error) {
 		}
 	}
 
-	// Phase two, collapse locality branches based on proximity
+	// Collapse locality branches based on proximity
 	err = geoCollapse(&o)
 	if err != nil {
 		panic(err)
 	}
 
-	// Geocenter calculation
+	// Calculate a geocenter for the principal based on known
+	// authentications
 	o.Geocenter, err = geoFindGeocenter(o)
+	if err != nil {
+		panic(err)
+	}
+
+	// Generate any alert events
+	err = o.alertAnalyze()
 	if err != nil {
 		panic(err)
 	}
