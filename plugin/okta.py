@@ -11,6 +11,16 @@ def procln(ev):
     ret = {'valid': False, 'name': 'okta'}
     if 'details' not in ev:
         return ret
+    if 'action' not in ev['details']:
+        return ret
+    if 'objectType' not in ev['details']['action']:
+        return
+    ot = ev['details']['action']['objectType']
+    if ot != 'app.ldap.login.success' and \
+        ot != 'app.auth.sso' and \
+        ot != 'app.ad.agent.user-auth-and-update' and \
+        ot != 'core.user_auth.login_success':
+        return ret
     if 'actors' in ev['details']:
         aval = ev['details']['actors']
         for v in aval:
