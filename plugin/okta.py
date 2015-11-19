@@ -9,6 +9,9 @@ import json
 
 def procln(ev):
     ret = {'valid': False, 'name': 'okta'}
+    if 'utctimestamp' not in ev:
+        return ret
+    ret['timestamp'] = ev['utctimestamp']
     if 'details' not in ev:
         return ret
     if 'action' not in ev['details']:

@@ -18,6 +18,7 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"time"
 )
 
 // Describes input sent to a plugin; primarily a slice of raw JSON documents
@@ -44,10 +45,11 @@ func (p *pluginResult) validate() error {
 
 // Corresponds to an individual event in a plugin result
 type eventResult struct {
-	Principal  string `json:"principal"`   // Authentication principal, identifier
-	SourceIPV4 string `json:"source_ipv4"` // Source IPV4 for authentication
-	Valid      bool   `json:"valid"`       // True if entry was parsed correctly by plugin
-	Name       string `json:"name"`        // Name of plugin that created result
+	Timestamp  time.Time `json:"timestamp"`   // Result timestamp
+	Principal  string    `json:"principal"`   // Authentication principal, identifier
+	SourceIPV4 string    `json:"source_ipv4"` // Source IPV4 for authentication
+	Valid      bool      `json:"valid"`       // True if entry was parsed correctly by plugin
+	Name       string    `json:"name"`        // Name of plugin that created result
 }
 
 func (e *eventResult) validate() error {

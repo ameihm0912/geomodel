@@ -80,6 +80,9 @@ func mergeResults(principal string, res []eventResult) (err error) {
 		panic(err)
 	}
 
+	// Update the lastupdated timestamp
+	o.LastUpdated = time.Now().UTC()
+
 	err = savePrincipalState(o)
 	if err != nil {
 		panic(err)

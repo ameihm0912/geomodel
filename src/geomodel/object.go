@@ -24,6 +24,7 @@ type object struct {
 	State          objectState     `json:"state,omitempty"`
 	Results        []objectResult  `json:"results,omitempty"`
 	Geocenter      objectGeocenter `json:"geocenter"`
+	LastUpdated    time.Time       `json:"last_updated"`
 }
 
 func (o *object) addEventResult(e eventResult) (err error) {
@@ -40,6 +41,7 @@ func (o *object) addEventResult(e eventResult) (err error) {
 	newres := objectResult{}
 	newres.SourcePlugin = e.Name
 	newres.BranchID = uuid.New()
+	newres.Timestamp = e.Timestamp
 	newres.Collapsed = false
 	newres.SourceIPV4 = e.SourceIPV4
 	err = geoObjectResult(&newres)
@@ -84,6 +86,8 @@ type objectResult struct {
 	Locality     string  `json:"locality"`
 	SourceIPV4   string  `json:"source_ipv4"`
 	Weight       float64 `json:"weight"`
+
+	Timestamp time.Time `json:"timestamp"`
 
 	Collapsed      bool   `json:"collapsed"`
 	CollapseBranch string `json:"collapse_branch,omitempty"`
