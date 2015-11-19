@@ -38,6 +38,7 @@ func (o *object) addEventResult(e eventResult) (err error) {
 	}
 
 	newres := objectResult{}
+	newres.SourcePlugin = e.Name
 	newres.BranchID = uuid.New()
 	newres.Collapsed = false
 	newres.SourceIPV4 = e.SourceIPV4
@@ -76,12 +77,13 @@ type objectGeocenter struct {
 
 // Single authentication result for a principal
 type objectResult struct {
-	BranchID   string  `json:"branch_id"`
-	Latitude   float64 `json:"latitude"`
-	Longitude  float64 `json:"longitude"`
-	Locality   string  `json:"locality"`
-	SourceIPV4 string  `json:"source_ipv4"`
-	Weight     float64 `json:"weight"`
+	SourcePlugin string  `json:"source_plugin"`
+	BranchID     string  `json:"branch_id"`
+	Latitude     float64 `json:"latitude"`
+	Longitude    float64 `json:"longitude"`
+	Locality     string  `json:"locality"`
+	SourceIPV4   string  `json:"source_ipv4"`
+	Weight       float64 `json:"weight"`
 
 	Collapsed      bool   `json:"collapsed"`
 	CollapseBranch string `json:"collapse_branch,omitempty"`

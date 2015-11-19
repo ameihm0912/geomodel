@@ -47,9 +47,13 @@ type eventResult struct {
 	Principal  string `json:"principal"`   // Authentication principal, identifier
 	SourceIPV4 string `json:"source_ipv4"` // Source IPV4 for authentication
 	Valid      bool   `json:"valid"`       // True if entry was parsed correctly by plugin
+	Name       string `json:"name"`        // Name of plugin that created result
 }
 
 func (e *eventResult) validate() error {
+	if e.Name == "" {
+		return fmt.Errorf("plugin result has no name")
+	}
 	if !e.Valid {
 		return nil
 	}

@@ -8,7 +8,7 @@ import sys
 import json
 
 def procln(ev):
-    ret = {'valid': False}
+    ret = {'valid': False, 'name': 'okta'}
     if 'details' not in ev:
         return ret
     if 'actors' in ev['details']:
