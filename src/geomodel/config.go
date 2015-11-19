@@ -21,7 +21,8 @@ type Config struct {
 	}
 
 	Geo struct {
-		CollapseMaximum int // Maximum allowable collapse for branch locality (km)
+		CollapseMaximum  int // Maximum allowable collapse for branch locality (km)
+		DeviationMinimum int // Minimum calculated deviation for alert entry
 	}
 
 	General struct {

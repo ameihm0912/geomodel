@@ -95,6 +95,11 @@ func (o *object) weightThresholdDeviation() {
 
 func (o *object) alertAnalyze() error {
 	o.weightThresholdDeviation()
+	if o.WeightThresh < float64(cfg.Geo.DeviationMinimum) {
+		logf("skipping alertAnalyze() on %v, %v below deviation min", o.ObjectIDString, o.WeightThresh)
+		return nil
+	}
+	logf("suspect deviation %v for %v", o.WeightThresh, o.ObjectIDString)
 	return nil
 }
 
