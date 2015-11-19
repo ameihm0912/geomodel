@@ -8,6 +8,7 @@
 package main
 
 import (
+	"code.google.com/p/go-uuid/uuid"
 	"fmt"
 	"time"
 )
@@ -37,18 +38,14 @@ func (o *object) addEventResult(e eventResult) (err error) {
 	}
 
 	newres := objectResult{}
+	newres.BranchID = uuid.New()
+	newres.Collapsed = false
 	newres.SourceIPV4 = e.SourceIPV4
 	err = geoObjectResult(&newres)
 	if err != nil {
 		panic(err)
 	}
 	o.Results = append(o.Results, newres)
-
-	// Geocenter calculation
-	o.Geocenter, err = geoFindGeocenter(*o)
-	if err != nil {
-		panic(err)
-	}
 
 	return nil
 }
@@ -75,9 +72,13 @@ type objectGeocenter struct {
 
 // Single authentication result for a principal
 type objectResult struct {
+	BranchID   string  `json:"branch_id"`
 	Latitude   float64 `json:"latitude"`
 	Longitude  float64 `json:"longitude"`
 	Locality   string  `json:"locality"`
 	SourceIPV4 string  `json:"source_ipv4"`
 	Weight     float64 `json:"weight"`
+
+	Collapsed      bool   `json:"collapsed"`
+	CollapseBranch string `json:"collapse_branch,omitempty"`
 }

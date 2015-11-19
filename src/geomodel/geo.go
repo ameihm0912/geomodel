@@ -48,6 +48,43 @@ func geoObjectResult(o *objectResult) (err error) {
 	return nil
 }
 
+// Collapse branches in the object based on proximity to tres; the number of
+// branches collapsed during the operation is returned
+func geoCollapseUsing(o *object, tres objectResult) float64 {
+	var ret float64 = 0
+	for i := range o.Results {
+		p0 := &o.Results[i]
+
+		if p0.BranchID == tres.BranchID {
+			continue
+		}
+
+		la1 := tres.Latitude
+		la2 := p0.Latitude
+		lo1 := tres.Longitude
+		lo2 := p0.Longitude
+		dist := km_between_two_points(la1, lo1, la2, lo2)
+		if dist > float64(cfg.Geo.CollapseMaximum) {
+			continue
+		}
+		p0.Collapsed = true
+		p0.CollapseBranch = tres.BranchID
+		ret++
+	}
+	return ret
+}
+
+func geoCollapse(o *object) (err error) {
+	for i := range o.Results {
+		// If a node has already been collapsed, don't look at it again
+		if o.Results[i].Collapsed {
+			continue
+		}
+		o.Results[i].Weight += geoCollapseUsing(o, o.Results[i])
+	}
+	return nil
+}
+
 func geoFindGeocenter(o object) (gc objectGeocenter, err error) {
 	var lat, lon_gw, lon_dl float64
 	// First pass: calculate two geocenters: one on the greenwich meridian

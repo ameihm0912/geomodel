@@ -20,6 +20,10 @@ type Config struct {
 		StateIndex  string // geomodel state index
 	}
 
+	Geo struct {
+		CollapseMaximum int // Maximum allowable collapse for branch locality (km)
+	}
+
 	General struct {
 		Context string // Context name
 		Plugins string // Plugin directory path
