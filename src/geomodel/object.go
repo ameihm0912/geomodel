@@ -10,6 +10,7 @@ package main
 import (
 	"code.google.com/p/go-uuid/uuid"
 	"fmt"
+	"math"
 	"time"
 )
 
@@ -25,6 +26,7 @@ type object struct {
 	Results        []objectResult  `json:"results,omitempty"`
 	Geocenter      objectGeocenter `json:"geocenter"`
 	LastUpdated    time.Time       `json:"last_updated"`
+	WeightThresh   float64         `json:"weight_threshold"`
 }
 
 func (o *object) addEventResult(e eventResult) (err error) {
@@ -59,7 +61,40 @@ func (o *object) newFromPrincipal(principal string) {
 	o.Context = cfg.General.Context
 }
 
+func (o *object) weightThresholdDeviation() {
+	var fset []float64
+
+	for _, x := range o.Results {
+		// Only take into account branches that have not been
+		// collapsed
+		if x.Collapsed {
+			continue
+		}
+		fset = append(fset, x.Weight)
+	}
+	if len(fset) <= 1 {
+		o.WeightThresh = 0
+		return
+	}
+	var t0 float64 = 0
+	for _, x := range fset {
+		t0 += x
+	}
+	mean := t0 / float64(len(fset))
+	var fset2 []float64
+	for _, x := range fset {
+		fset2 = append(fset2, math.Pow(x-mean, 2))
+	}
+	t0 = 0
+	for _, x := range fset {
+		t0 += x
+	}
+	variance := t0 / float64(len(fset2))
+	o.WeightThresh = math.Sqrt(variance)
+}
+
 func (o *object) alertAnalyze() error {
+	o.weightThresholdDeviation()
 	return nil
 }
 
