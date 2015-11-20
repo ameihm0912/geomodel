@@ -28,6 +28,9 @@ type object struct {
 	LastUpdated    time.Time       `json:"last_updated"`
 	WeightThresh   float64         `json:"weight_threshold"`
 	AlertAnalyzed  bool            `json:"alert_analyzed"`
+
+	MLocations []location `json:"locations_model"`
+	RLocations []location `json:"locations_review"`
 }
 
 func (o *object) addEventResult(e eventResult) (err error) {
@@ -60,6 +63,37 @@ func (o *object) newFromPrincipal(principal string) {
 	o.ObjectID = getObjectID(principal)
 	o.ObjectIDString = principal
 	o.Context = cfg.General.Context
+}
+
+func (o *object) updateLocations() {
+	o.MLocations = o.MLocations[:0]
+	o.RLocations = o.RLocations[:0]
+	// Sort based on the mean of the data set
+	cnt := 0
+	var s float64 = 0
+	for _, x := range o.Results {
+		if x.Collapsed {
+			continue
+		}
+		s += x.Weight
+		cnt++
+
+	}
+	m := s / float64(cnt)
+	for _, x := range o.Results {
+		if x.Collapsed {
+			continue
+		}
+		nloc := location{
+			Locality: x.Locality,
+			Weight:   x.Weight,
+		}
+		if x.Weight < m {
+			o.RLocations = append(o.RLocations, nloc)
+		} else {
+			o.MLocations = append(o.MLocations, nloc)
+		}
+	}
 }
 
 func (o *object) weightThresholdDeviation() {
@@ -97,6 +131,7 @@ func (o *object) weightThresholdDeviation() {
 func (o *object) alertAnalyze() error {
 	o.AlertAnalyzed = false
 	o.weightThresholdDeviation()
+	o.updateLocations()
 	if o.WeightThresh < float64(cfg.Geo.DeviationMinimum) {
 		logf("skipping alertAnalyze() on %v, %v below deviation min", o.ObjectIDString, o.WeightThresh)
 		return nil
@@ -104,6 +139,11 @@ func (o *object) alertAnalyze() error {
 	o.AlertAnalyzed = true
 	logf("suspect deviation %v for %v", o.WeightThresh, o.ObjectIDString)
 	return nil
+}
+
+type location struct {
+	Weight   float64 `json:"weight"`
+	Locality string  `json:"locality"`
 }
 
 // Specific to global state tracking
