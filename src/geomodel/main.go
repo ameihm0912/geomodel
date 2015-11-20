@@ -83,6 +83,7 @@ func main() {
 	var delIndex = flag.Bool("D", false, "delete and recreate state index on startup")
 	var confPath = flag.String("f", "etc/geomodel.conf", "configuration path")
 	var initOff = flag.Int("o", 0, "initial state offset in seconds")
+	var eventIdx = flag.String("I", "", "override event index name from config file")
 	flag.Parse()
 
 	err := cfg.loadConfiguration(*confPath)
@@ -92,6 +93,9 @@ func main() {
 	}
 	cfg.deleteStateIndex = *delIndex
 	cfg.initialOffset = *initOff
+	if *eventIdx != "" {
+		cfg.ES.EventIndex = *eventIdx
+	}
 
 	// Initialize the logging routine
 	var wg sync.WaitGroup
