@@ -27,6 +27,7 @@ type object struct {
 	Geocenter      objectGeocenter `json:"geocenter"`
 	LastUpdated    time.Time       `json:"last_updated"`
 	WeightThresh   float64         `json:"weight_threshold"`
+	AlertAnalyzed  bool            `json:"alert_analyzed"`
 }
 
 func (o *object) addEventResult(e eventResult) (err error) {
@@ -94,11 +95,13 @@ func (o *object) weightThresholdDeviation() {
 }
 
 func (o *object) alertAnalyze() error {
+	o.AlertAnalyzed = false
 	o.weightThresholdDeviation()
 	if o.WeightThresh < float64(cfg.Geo.DeviationMinimum) {
 		logf("skipping alertAnalyze() on %v, %v below deviation min", o.ObjectIDString, o.WeightThresh)
 		return nil
 	}
+	o.AlertAnalyzed = true
 	logf("suspect deviation %v for %v", o.WeightThresh, o.ObjectIDString)
 	return nil
 }

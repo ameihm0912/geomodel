@@ -14,6 +14,7 @@ import (
 	"fmt"
 	elastigo "github.com/mattbaird/elastigo/lib"
 	"io/ioutil"
+	"net"
 	"os"
 	"os/exec"
 	"path"
@@ -64,6 +65,33 @@ func (e *eventResult) validate() error {
 	}
 	if e.SourceIPV4 == "" {
 		return fmt.Errorf("plugin result has no source_ipv4 value")
+	}
+	if net.ParseIP(e.SourceIPV4) == nil {
+		return fmt.Errorf("source_ipv4 value %v is invalid", e.SourceIPV4)
+	}
+	err := e.invalidateSourceIPV4()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (e *eventResult) invalidateSourceIPV4() error {
+	var blackList = []*net.IPNet{
+		&net.IPNet{IP: net.IPv4(0, 0, 0, 0), Mask: net.IPv4Mask(255, 255, 255, 255)},
+		&net.IPNet{IP: net.IPv4(10, 0, 0, 0), Mask: net.IPv4Mask(255, 0, 0, 0)},
+		&net.IPNet{IP: net.IPv4(172, 16, 0, 0), Mask: net.IPv4Mask(255, 240, 0, 0)},
+		&net.IPNet{IP: net.IPv4(192, 168, 0, 0), Mask: net.IPv4Mask(255, 255, 0, 0)},
+	}
+	ip := net.ParseIP(e.SourceIPV4)
+	if ip == nil {
+		return fmt.Errorf("source_ipv4 value %v is invalid", e.SourceIPV4)
+	}
+	for _, x := range blackList {
+		if x.Contains(ip) {
+			e.Valid = false
+			return nil
+		}
 	}
 	return nil
 }
