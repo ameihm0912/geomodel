@@ -85,10 +85,10 @@ func queryUsingPlugin(p plugin, req queryRequest) (err error) {
 	return nil
 }
 
-func handleQueryRequest(q queryRequest) {
+func handleQueryRequest(q queryRequest) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			logf("handleQueryRequest() -> %v", e)
+			err = fmt.Errorf("handleQueryRequest() -> %v", e)
 		}
 	}()
 	logf("handling new query request")
@@ -100,6 +100,7 @@ func handleQueryRequest(q queryRequest) {
 			panic(err)
 		}
 	}
+	return nil
 }
 
 func queryHandler(exitCh chan bool, notifyCh chan bool) {
@@ -108,15 +109,18 @@ func queryHandler(exitCh chan bool, notifyCh chan bool) {
 			logf("queryHandler() -> %v", e)
 		}
 		logf("query handler exiting")
+		notifyCh <- true
 	}()
 	logf("query handler started")
 
 	for {
 		select {
 		case qr := <-queryRequestCh:
-			handleQueryRequest(qr)
+			err := handleQueryRequest(qr)
+			if err != nil {
+				panic(err)
+			}
 		case <-exitCh:
-			notifyCh <- true
 			return
 		}
 	}

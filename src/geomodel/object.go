@@ -60,7 +60,11 @@ func (o *object) addEventResult(e eventResult) (err error) {
 }
 
 func (o *object) newFromPrincipal(principal string) {
-	o.ObjectID = getObjectID(principal)
+	var err error
+	o.ObjectID, err = getObjectID(principal)
+	if err != nil {
+		panic(err)
+	}
 	o.ObjectIDString = principal
 	o.Context = cfg.General.Context
 }

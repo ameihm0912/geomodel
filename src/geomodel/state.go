@@ -16,25 +16,133 @@ import (
 
 var stateMagic = "GEOMODEL_STATE"
 
-// In process state tracking, synchronized with global state stored
-// in ES.
+// Defines a general state reader/write interface
+type stateService interface {
+	writeObject(object) error
+	readObject(string) (*object, error)
+	doInit() error
+}
+
+var stateServ stateService = nil
+
+type esStateService struct {
+	stateDomain string
+	stateIndex  string
+}
+
+func (e *esStateService) writeObject(o object) (err error) {
+	conn := elastigo.NewConn()
+	conn.Domain = e.stateDomain
+	_, err = conn.Index(e.stateIndex, "geomodel_state", o.ObjectID, nil, o)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (e *esStateService) readObject(objid string) (o *object, err error) {
+	conn := elastigo.NewConn()
+	conn.Domain = e.stateDomain
+
+	template := `{
+		"query": {
+			"term": {
+				"object_id": "%v"
+			}
+		}
+	}`
+	tempbuf := fmt.Sprintf(template, objid)
+	res, err := conn.Search(e.stateIndex, "geomodel_state", nil, tempbuf)
+	if err != nil {
+		return o, err
+	}
+	if res.Hits.Len() == 0 {
+		return nil, nil
+	}
+	if res.Hits.Len() > 1 {
+		return nil, fmt.Errorf("consistency failure, more than one object matched")
+	}
+	o = &object{}
+	err = json.Unmarshal(*res.Hits.Hits[0].Source, o)
+	if err != nil {
+		return nil, err
+	}
+
+	return o, nil
+}
+
+func (e *esStateService) doInit() (err error) {
+	if cfg.ES.StateESHost == "" {
+		return fmt.Errorf("no valid es state host defined in configuration")
+	}
+	if cfg.ES.StateIndex == "" {
+		return fmt.Errorf("no valid es state index defined in configuration")
+	}
+	e.stateDomain = cfg.ES.StateESHost
+	e.stateIndex = cfg.ES.StateIndex
+	return e.stateIndexInit()
+}
+
+func (e *esStateService) stateIndexInit() (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("stateIndexInit() -> %v", e)
+		}
+	}()
+
+	conn := elastigo.NewConn()
+	conn.Domain = e.stateDomain
+
+	if cfg.deleteStateIndex {
+		logf("removing any existing state index")
+		_, err := conn.DeleteIndex(e.stateIndex)
+		if err != nil && err != elastigo.RecordNotFound {
+			panic(err)
+		}
+	}
+
+	ret, err := conn.IndicesExists(e.stateIndex)
+	if err != nil {
+		panic(err)
+	}
+	if ret {
+		logf("state index exists, skipping creation")
+		return nil
+	}
+	logf("state index does not exist, creating")
+	_, err = conn.CreateIndexWithSettings(e.stateIndex, getStateSettings())
+	if err != nil {
+		panic(err)
+	}
+
+	return nil
+}
+
+// In-process state tracking, synchronized with global state stored
+// in by the state service.
 type procState struct {
 	timeEndpoint time.Time // Time we've read up until
 }
 
+// Update state using information from object o
 func (s *procState) fromObject(o object) (err error) {
 	s.timeEndpoint = o.State.TimeEndpoint
 	return nil
 }
 
+// Create a new state object based on current state information
 func (s *procState) toObject() (o object, err error) {
 	o.ObjectIDString = stateMagic
-	o.ObjectID = getObjectID(o.ObjectIDString)
+	o.ObjectID, err = getObjectID(o.ObjectIDString)
+	if err != nil {
+		panic(err)
+	}
 	o.Context = cfg.General.Context
 	o.State.TimeEndpoint = s.timeEndpoint
 	return o, nil
 }
 
+// Initialize a new state object
 func (s *procState) newState() {
 	s.timeEndpoint = time.Now().UTC()
 	if cfg.initialOffset != 0 {
@@ -44,102 +152,58 @@ func (s *procState) newState() {
 
 var state procState
 
-func updateState() (err error) {
+func setStateService(ss stateService) error {
+	if stateServ != nil {
+		return fmt.Errorf("setStateService() -> state service already initialized")
+	}
+	stateServ = ss
+	return stateServ.doInit()
+}
+
+func getStateService() stateService {
+	return stateServ
+}
+
+func updateState(ss stateService) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("updateState() -> %v", e)
 		}
 	}()
-	stateobjid := getObjectID(stateMagic)
-
-	conn := elastigo.NewConn()
-	conn.Domain = cfg.ES.StateESHost
-
-	template := `{
-		"query": {
-			"term": {
-				"object_id": "%v"
-			}
-		}
-	}`
-	tempbuf := fmt.Sprintf(template, stateobjid)
-	res, err := conn.Search(cfg.ES.StateIndex, "geomodel_state", nil, tempbuf)
+	stateobjid, err := getObjectID(stateMagic)
 	if err != nil {
 		panic(err)
 	}
-	if res.Hits.Len() == 0 {
+	obj, err := ss.readObject(stateobjid)
+	if err != nil {
+		panic(err)
+	}
+	if obj == nil {
 		logf("no state found, setting initial value")
 		state.newState()
 		return nil
 	}
-	if res.Hits.Len() > 1 {
-		panic("> 1 state matched in index")
-	}
-	o := object{}
-	err = json.Unmarshal(*res.Hits.Hits[0].Source, &o)
-	if err != nil {
-		panic(err)
-	}
-	err = state.fromObject(o)
+	err = state.fromObject(*obj)
 	if err != nil {
 		panic(err)
 	}
 	return nil
 }
 
-func saveState() (err error) {
+func saveState(ss stateService) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("saveState() -> %v", e)
 		}
 	}()
-	conn := elastigo.NewConn()
-	conn.Domain = cfg.ES.StateESHost
-
 	sobj, err := state.toObject()
 	if err != nil {
 		panic(err)
 	}
-	_, err = conn.Index(cfg.ES.StateIndex, "geomodel_state", sobj.ObjectID, nil, sobj)
+	err = ss.writeObject(sobj)
 	if err != nil {
 		panic(err)
 	}
-
-	return nil
-}
-
-// Prepare the state index for use by the state management process
-func stateIndexInit() (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("stateIndexInit() -> %v", e)
-		}
-	}()
-	conn := elastigo.NewConn()
-	conn.Domain = cfg.ES.StateESHost
-
-	if cfg.deleteStateIndex {
-		logf("removing any existing state index")
-		_, err := conn.DeleteIndex(cfg.ES.StateIndex)
-		if err != nil && err != elastigo.RecordNotFound {
-			panic(err)
-		}
-	}
-
-	ret, err := conn.IndicesExists(cfg.ES.StateIndex)
-	if err != nil {
-		panic(err)
-	}
-	if ret {
-		logf("state index exists, skipping creation")
-		return nil
-	}
-	logf("state index does not exist, creating")
-	_, err = conn.CreateIndexWithSettings(cfg.ES.StateIndex, getStateSettings())
-	if err != nil {
-		panic(err)
-	}
-
 	return nil
 }
 
@@ -187,18 +251,14 @@ func stateManager(exitCh chan bool, notifyCh chan bool) {
 			logf("stateManager() -> %v", e)
 		}
 		logf("state manager exiting")
+		notifyCh <- true
 	}()
 	logf("state manager started")
-
-	err := stateIndexInit()
-	if err != nil {
-		panic(err)
-	}
 
 	for {
 		logf("state processor analyzing interval")
 		// Update our current state from ES
-		err = updateState()
+		err := updateState(getStateService())
 		if err != nil {
 			panic(err)
 		}
@@ -209,7 +269,7 @@ func stateManager(exitCh chan bool, notifyCh chan bool) {
 		}
 
 		// Save our current state to ES
-		err = saveState()
+		err = saveState(getStateService())
 		if err != nil {
 			panic(err)
 		}
@@ -217,7 +277,6 @@ func stateManager(exitCh chan bool, notifyCh chan bool) {
 		select {
 		case <-time.After(time.Duration(cfg.Timer.State) * time.Second):
 		case <-exitCh:
-			notifyCh <- true
 			return
 		}
 	}

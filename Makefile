@@ -3,6 +3,9 @@ GO = GOPATH=$(shell pwd):$(shell go env GOROOT)/bin go
 
 all: $(TARGETS)
 
+test:
+	$(GO) test geomodel
+
 depends:
 	$(GO) get github.com/mattbaird/elastigo
 	$(GO) get code.google.com/p/gcfg

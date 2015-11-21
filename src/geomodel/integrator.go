@@ -8,9 +8,7 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	elastigo "github.com/mattbaird/elastigo/lib"
 	"sync"
 	"time"
 )
@@ -98,10 +96,7 @@ func savePrincipalState(o object) (err error) {
 		}
 	}()
 
-	conn := elastigo.NewConn()
-	conn.Domain = cfg.ES.StateESHost
-
-	_, err = conn.Index(cfg.ES.StateIndex, "geomodel_state", o.ObjectID, nil, o)
+	err = getStateService().writeObject(o)
 	if err != nil {
 		panic(err)
 	}
@@ -116,32 +111,20 @@ func getPrincipalState(principal string) (ret object, err error) {
 		}
 	}()
 
-	objid := getObjectID(principal)
-
-	conn := elastigo.NewConn()
-	conn.Domain = cfg.ES.StateESHost
-
-	template := `{
-		"query": {
-			"term": {
-				"object_id": "%v"
-			}
-		}
-	}`
-	tempbuf := fmt.Sprintf(template, objid)
-	res, err := conn.Search(cfg.ES.StateIndex, "geomodel_state", nil, tempbuf)
+	objid, err := getObjectID(principal)
 	if err != nil {
 		panic(err)
 	}
-	if res.Hits.Len() == 0 {
+	o, err := getStateService().readObject(objid)
+	if err != nil {
+		panic(err)
+	}
+	if o == nil {
 		logf("no state found for %v, creating", principal)
 		ret.newFromPrincipal(principal)
 		return ret, nil
 	}
-	err = json.Unmarshal(*res.Hits.Hits[0].Source, &ret)
-	if err != nil {
-		panic(err)
-	}
+	ret = *o
 
 	return ret, nil
 }
@@ -207,6 +190,7 @@ func integrator(exitCh chan bool, notifyCh chan bool) {
 			logf("integrator() -> %v", e)
 		}
 		logf("integrator exiting")
+		notifyCh <- true
 	}()
 	logf("integrator started")
 
@@ -225,7 +209,6 @@ func integrator(exitCh chan bool, notifyCh chan bool) {
 		case <-exitCh:
 			mergeExit <- true
 			iwg.Wait()
-			notifyCh <- true
 			return
 		}
 	}

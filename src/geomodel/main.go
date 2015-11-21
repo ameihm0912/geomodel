@@ -106,6 +106,8 @@ func main() {
 		logger()
 	}()
 
+	setStateService(&esStateService{})
+
 	err = maxmindInit()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error initializing maxmind: %v\n", err)

@@ -69,6 +69,7 @@ func (e *eventResult) validate() error {
 	if net.ParseIP(e.SourceIPV4) == nil {
 		return fmt.Errorf("source_ipv4 value %v is invalid", e.SourceIPV4)
 	}
+	// Invalidate any results we don't need to look at
 	err := e.invalidateSourceIPV4()
 	if err != nil {
 		return err
@@ -103,22 +104,28 @@ type plugin struct {
 }
 
 func (p *plugin) runPlugin(input []byte) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("runPlugin() -> %v", e)
+		}
+	}()
+
 	var output bytes.Buffer
 	cmd := exec.Command(p.path)
 	cmd.Stdin = bytes.NewReader(input)
 	cmd.Stdout = &output
 	err = cmd.Run()
 	if err != nil {
-		return fmt.Errorf("error running %v: %v", p.path, err)
+		panic(err)
 	}
 	var res pluginResult
 	err = json.Unmarshal(output.Bytes(), &res)
 	if err != nil {
-		return fmt.Errorf("error parsing output from %v: %v", p.path, err)
+		panic(err)
 	}
 	err = res.validate()
 	if err != nil {
-		return fmt.Errorf("error validating plugin output from %v: %v", p.name, err)
+		panic(err)
 	}
 	pluginResultCh <- res
 	return nil
@@ -134,13 +141,19 @@ var pluginList []plugin
 // Given an event query response from ES, return a byte slice suitable to be
 // passed to a plugin
 func pluginRequestDataFromES(r elastigo.SearchResult) (ret []byte, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("pluginRequestDataFromES() -> %v", e)
+		}
+	}()
+
 	pr := pluginRequest{}
 	for _, x := range r.Hits.Hits {
 		pr.Events = append(pr.Events, x.Source)
 	}
 	ret, err = json.Marshal(pr)
 	if err != nil {
-		return ret, err
+		panic(err)
 	}
 	return ret, nil
 }
