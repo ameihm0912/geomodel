@@ -129,6 +129,35 @@ func getPrincipalState(principal string) (ret object, err error) {
 	return ret, nil
 }
 
+func integrationMergeQueue() (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("integrationMergeQueue() -> %v", e)
+		}
+	}()
+
+	princemap := make(map[string][]eventResult)
+	// Fetch whatever we have queued; for efficiency group results
+	// for the same principal together, reducing the number of
+	// requests needed later.
+	for e, ok := queue.getResult(); ok; e, ok = queue.getResult() {
+		ptr, ok := princemap[e.Principal]
+		if !ok {
+			princemap[e.Principal] = make([]eventResult, 0)
+			ptr = princemap[e.Principal]
+		}
+		ptr = append(ptr, e)
+		princemap[e.Principal] = ptr
+	}
+	for k, v := range princemap {
+		err = mergeResults(k, v)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return nil
+}
+
 func integrationMerge(exitCh chan bool) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -146,30 +175,9 @@ func integrationMerge(exitCh chan bool) {
 		}
 		logf("integration merge process running")
 
-		princemap := make(map[string][]eventResult)
-		// Fetch whatever we have queued; for efficiency group results
-		// for the same principal together, reducing the number of
-		// requests needed later.
-		for e, ok := queue.getResult(); ok; e, ok = queue.getResult() {
-			ptr, ok := princemap[e.Principal]
-			if !ok {
-				princemap[e.Principal] = make([]eventResult, 0)
-				ptr = princemap[e.Principal]
-			}
-			ptr = append(ptr, e)
-			princemap[e.Principal] = ptr
-		}
-		failed := false
-		var err error
-		for k, v := range princemap {
-			err = mergeResults(k, v)
-			if err != nil {
-				failed = true
-				break
-			}
-		}
-		if failed {
-			logf("integration merge failed, %v", err)
+		err := integrationMergeQueue()
+		if err != nil {
+			panic(err)
 		}
 	}
 }

@@ -125,7 +125,7 @@ func (o *object) weightThresholdDeviation() {
 		fset2 = append(fset2, math.Pow(x-mean, 2))
 	}
 	t0 = 0
-	for _, x := range fset {
+	for _, x := range fset2 {
 		t0 += x
 	}
 	variance := t0 / float64(len(fset2))

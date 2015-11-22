@@ -1,10 +1,11 @@
 TARGETS = geomodel
 GO = GOPATH=$(shell pwd):$(shell go env GOROOT)/bin go
+TESTMMF = $(shell pwd)/GeoIP2-City.mmdb
 
 all: $(TARGETS)
 
 test:
-	$(GO) test geomodel
+	TESTMMF=$(TESTMMF) $(GO) test -v geomodel
 
 depends:
 	$(GO) get github.com/mattbaird/elastigo

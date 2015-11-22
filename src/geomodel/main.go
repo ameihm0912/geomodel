@@ -17,6 +17,7 @@ import (
 )
 
 var logch chan string
+var logActive bool
 var queryRequestCh chan queryRequest
 var pluginResultCh chan pluginResult
 
@@ -67,6 +68,9 @@ func startRoutines() {
 }
 
 func logf(s string, args ...interface{}) {
+	if !logActive {
+		return
+	}
 	buf := fmt.Sprintf(s, args...)
 	tstr := time.Now().Format("2006-01-02 15:04:05")
 	logbuf := fmt.Sprintf("[%v] %v", tstr, buf)
@@ -100,6 +104,7 @@ func main() {
 	// Initialize the logging routine
 	var wg sync.WaitGroup
 	logch = make(chan string, 32)
+	logActive = true
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
