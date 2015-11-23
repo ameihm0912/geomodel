@@ -10,6 +10,7 @@ package main
 import (
 	"code.google.com/p/gcfg"
 	"fmt"
+	"time"
 )
 
 type Config struct {
@@ -21,8 +22,7 @@ type Config struct {
 	}
 
 	Geo struct {
-		CollapseMaximum  int // Maximum allowable collapse for branch locality (km)
-		DeviationMinimum int // Minimum calculated deviation for alert entry
+		CollapseMaximum int // Maximum allowable collapse for branch locality (km)
 	}
 
 	General struct {
@@ -32,9 +32,10 @@ type Config struct {
 	}
 
 	Timer struct {
-		State          int // State interval in seconds
-		MaxQueryWindow int // Maximum query window in seconds
-		Merge          int // Merge interval in seconds
+		State          int    // State interval in seconds
+		MaxQueryWindow int    // Maximum query window in seconds
+		Merge          int    // Merge interval in seconds
+		ExpireEvents   string // time.Duration specifying how to prune events
 	}
 
 	// Not expected to be in the configuration file, but other options we
@@ -70,8 +71,18 @@ func (c *Config) validate() error {
 	if c.Timer.State < 10 {
 		return fmt.Errorf("timer..state must be >= 10")
 	}
+	if c.Timer.Merge < 10 {
+		return fmt.Errorf("timer..merge must be >= 10")
+	}
 	if c.Timer.MaxQueryWindow < 60 {
 		return fmt.Errorf("timer..maxquerywindow must be >= 60")
+	}
+	if c.Timer.ExpireEvents == "" {
+		return fmt.Errorf("timer..expireevents must be set")
+	}
+	_, err := time.ParseDuration(c.Timer.ExpireEvents)
+	if err != nil {
+		return err
 	}
 	return nil
 }

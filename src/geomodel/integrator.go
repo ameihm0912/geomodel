@@ -59,6 +59,17 @@ func mergeResults(principal string, res []eventResult) (err error) {
 		}
 	}
 
+	err = o.pruneExpiredEvents()
+	if err != nil {
+		panic(err)
+	}
+
+	// Flatten existing linkages
+	err = geoFlatten(&o)
+	if err != nil {
+		panic(err)
+	}
+
 	// Collapse locality branches based on proximity
 	err = geoCollapse(&o)
 	if err != nil {

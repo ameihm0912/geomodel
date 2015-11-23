@@ -47,6 +47,9 @@ func queryUsingPlugin(p plugin, req queryRequest) (err error) {
 	// Add plugins search terms to the query
 	mult := false
 	temp := ""
+	if len(p.searchTerms) == 0 {
+		panic("plugin has no search terms defined")
+	}
 	for _, x := range p.searchTerms {
 		if mult {
 			temp += ","

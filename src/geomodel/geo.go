@@ -42,7 +42,15 @@ func geoObjectResult(o *objectResult) (err error) {
 	}
 	o.Latitude = record.Location.Latitude
 	o.Longitude = record.Location.Longitude
-	o.Locality = record.City.Names["en"] + ", " + record.Country.Names["en"]
+	cityName := record.City.Names["en"]
+	countryName := record.Country.Names["en"]
+	if cityName == "" {
+		cityName = "Unknown"
+	}
+	if countryName == "" {
+		countryName = "Unknown"
+	}
+	o.Locality = cityName + ", " + countryName
 	o.Weight = 1
 
 	return nil
@@ -69,9 +77,25 @@ func geoCollapseUsing(o *object, tres objectResult) float64 {
 		}
 		p0.Collapsed = true
 		p0.CollapseBranch = tres.BranchID
+		// If any of the objects we are linking have been escalated,
+		// mark the other as escalated as well.
+		if tres.Escalated {
+			p0.Escalated = true
+		} else if p0.Escalated {
+			tres.Escalated = true
+		}
 		ret++
 	}
 	return ret
+}
+
+func geoFlatten(o *object) (err error) {
+	for i := range o.Results {
+		o.Results[i].Collapsed = false
+		o.Results[i].CollapseBranch = ""
+		o.Results[i].Weight = 1
+	}
+	return nil
 }
 
 func geoCollapse(o *object) (err error) {
@@ -81,6 +105,12 @@ func geoCollapse(o *object) (err error) {
 			continue
 		}
 		o.Results[i].Weight += geoCollapseUsing(o, o.Results[i])
+	}
+	o.NumCenters = 0
+	for _, x := range o.Results {
+		if !x.Collapsed {
+			o.NumCenters++
+		}
 	}
 	return nil
 }

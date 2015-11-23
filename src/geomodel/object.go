@@ -19,18 +19,15 @@ import (
 // or it could be a global state object. We use the same structure for
 // both.
 type object struct {
-	ObjectID       string          `json:"object_id"`
-	ObjectIDString string          `json:"object_id_string"`
-	Context        string          `json:"context"`
-	State          objectState     `json:"state,omitempty"`
-	Results        []objectResult  `json:"results,omitempty"`
-	Geocenter      objectGeocenter `json:"geocenter"`
-	LastUpdated    time.Time       `json:"last_updated"`
-	WeightThresh   float64         `json:"weight_threshold"`
-	AlertAnalyzed  bool            `json:"alert_analyzed"`
-
-	MLocations []location `json:"locations_model"`
-	RLocations []location `json:"locations_review"`
+	ObjectID        string          `json:"object_id"`
+	ObjectIDString  string          `json:"object_id_string"`
+	Context         string          `json:"context"`
+	State           objectState     `json:"state,omitempty"`
+	Results         []objectResult  `json:"results,omitempty"`
+	Geocenter       objectGeocenter `json:"geocenter"`
+	LastUpdated     time.Time       `json:"last_updated"`
+	WeightDeviation float64         `json:"weight_deviation"`
+	NumCenters      int             `json:"numcenters"`
 }
 
 func (o *object) addEventResult(e eventResult) (err error) {
@@ -49,6 +46,8 @@ func (o *object) addEventResult(e eventResult) (err error) {
 	newres.BranchID = uuid.New()
 	newres.Timestamp = e.Timestamp
 	newres.Collapsed = false
+	newres.Escalated = false
+	newres.Weight = 1
 	newres.SourceIPV4 = e.SourceIPV4
 	err = geoObjectResult(&newres)
 	if err != nil {
@@ -69,38 +68,24 @@ func (o *object) newFromPrincipal(principal string) {
 	o.Context = cfg.General.Context
 }
 
-func (o *object) updateLocations() {
-	o.MLocations = o.MLocations[:0]
-	o.RLocations = o.RLocations[:0]
-	// Sort based on the mean of the data set
-	cnt := 0
-	var s float64 = 0
+func (o *object) pruneExpiredEvents() error {
+	newres := make([]objectResult, 0)
 	for _, x := range o.Results {
-		if x.Collapsed {
+		dur, err := time.ParseDuration(cfg.Timer.ExpireEvents)
+		if err != nil {
+			return err
+		}
+		cutoff := time.Now().UTC().Add(-1 * dur)
+		if x.Timestamp.Before(cutoff) {
 			continue
 		}
-		s += x.Weight
-		cnt++
-
+		newres = append(newres, x)
 	}
-	m := s / float64(cnt)
-	for _, x := range o.Results {
-		if x.Collapsed {
-			continue
-		}
-		nloc := location{
-			Locality: x.Locality,
-			Weight:   x.Weight,
-		}
-		if x.Weight < m {
-			o.RLocations = append(o.RLocations, nloc)
-		} else {
-			o.MLocations = append(o.MLocations, nloc)
-		}
-	}
+	o.Results = newres
+	return nil
 }
 
-func (o *object) weightThresholdDeviation() {
+func (o *object) calculateWeightDeviation() {
 	var fset []float64
 
 	for _, x := range o.Results {
@@ -112,7 +97,7 @@ func (o *object) weightThresholdDeviation() {
 		fset = append(fset, x.Weight)
 	}
 	if len(fset) <= 1 {
-		o.WeightThresh = 0
+		o.WeightDeviation = 0
 		return
 	}
 	var t0 float64 = 0
@@ -129,25 +114,30 @@ func (o *object) weightThresholdDeviation() {
 		t0 += x
 	}
 	variance := t0 / float64(len(fset2))
-	o.WeightThresh = math.Sqrt(variance)
+	o.WeightDeviation = math.Sqrt(variance)
+}
+
+func (o *object) markEscalated(branchID string) {
+	for i := range o.Results {
+		if o.Results[i].BranchID == branchID || o.Results[i].CollapseBranch == branchID {
+			o.Results[i].Escalated = true
+		}
+	}
 }
 
 func (o *object) alertAnalyze() error {
-	o.AlertAnalyzed = false
-	o.weightThresholdDeviation()
-	o.updateLocations()
-	if o.WeightThresh < float64(cfg.Geo.DeviationMinimum) {
-		logf("skipping alertAnalyze() on %v, %v below deviation min", o.ObjectIDString, o.WeightThresh)
-		return nil
+	o.calculateWeightDeviation()
+	for i := range o.Results {
+		if o.Results[i].Collapsed {
+			continue
+		}
+		if o.Results[i].Escalated {
+			continue
+		}
+		logf("[NOTICE] new geocenter for %v (%v)", o.ObjectIDString, o.Results[i].Locality)
+		o.markEscalated(o.Results[i].BranchID)
 	}
-	o.AlertAnalyzed = true
-	logf("suspect deviation %v for %v", o.WeightThresh, o.ObjectIDString)
 	return nil
-}
-
-type location struct {
-	Weight   float64 `json:"weight"`
-	Locality string  `json:"locality"`
 }
 
 // Specific to global state tracking
@@ -173,6 +163,7 @@ type objectResult struct {
 	Locality     string  `json:"locality"`
 	SourceIPV4   string  `json:"source_ipv4"`
 	Weight       float64 `json:"weight"`
+	Escalated    bool    `json:"escalated"`
 
 	Timestamp time.Time `json:"timestamp"`
 
