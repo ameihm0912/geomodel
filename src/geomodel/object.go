@@ -210,9 +210,11 @@ func (o *object) alertAnalyze() (err error) {
 		}
 		logf("[NOTICE] new geocenter for %v (%v)", o.ObjectIDString, o.Results[i].Locality)
 		o.markEscalated(o.Results[i].BranchID)
-		err := o.sendAlert(o.Results[i].BranchID)
-		if err != nil {
-			panic(err)
+		if !cfg.noSendAlert {
+			err := o.sendAlert(o.Results[i].BranchID)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 	return nil

@@ -329,6 +329,7 @@ func testGenericInit() error {
 	cfg.General.MaxMind = os.Getenv("TESTMMF")
 	cfg.Geo.CollapseMaximum = 500
 	cfg.Timer.ExpireEvents = "720h"
+	cfg.noSendAlert = true
 	err := maxmindInit()
 	if err != nil {
 		return err

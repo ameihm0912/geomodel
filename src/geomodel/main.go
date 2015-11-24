@@ -86,6 +86,7 @@ func logger() {
 func main() {
 	var delIndex = flag.Bool("D", false, "delete and recreate state index on startup")
 	var confPath = flag.String("f", "etc/geomodel.conf", "configuration path")
+	var nsAlert = flag.Bool("n", false, "dont send alerts to mozdef")
 	var initOff = flag.Int("o", 0, "initial state offset in seconds")
 	var eventIdx = flag.String("I", "", "override event index name from config file")
 	flag.Parse()
@@ -97,6 +98,7 @@ func main() {
 	}
 	cfg.deleteStateIndex = *delIndex
 	cfg.initialOffset = *initOff
+	cfg.noSendAlert = *nsAlert
 	if *eventIdx != "" {
 		cfg.ES.EventIndex = *eventIdx
 	}
