@@ -114,6 +114,7 @@ func (e *esStateService) stateIndexInit() (err error) {
 	if err != nil {
 		panic(err)
 	}
+	time.Sleep(time.Duration(2) * time.Second)
 
 	return nil
 }
