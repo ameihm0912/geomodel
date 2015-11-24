@@ -10,7 +10,9 @@ package main
 import (
 	"code.google.com/p/go-uuid/uuid"
 	"fmt"
+	"github.com/jvehent/gozdef"
 	"math"
+	"os"
 	"time"
 )
 
@@ -125,7 +127,79 @@ func (o *object) markEscalated(branchID string) {
 	}
 }
 
-func (o *object) alertAnalyze() error {
+func (o *object) sendAlert(branchID string) (err error) {
+	type alertDetails struct {
+		Principal       string  `json:"principal"`
+		Locality        string  `json:"locality"`
+		WeightDeviation float64 `json:"weight_deviation"`
+		SourceIPV4      string  `json:"source_ipv4"`
+		Informer        string  `json:"informer"`
+	}
+
+	var loc string
+	var sipv4 string
+	var informer string
+	for _, x := range o.Results {
+		if x.Collapsed {
+			continue
+		}
+		if x.BranchID != branchID {
+			continue
+		}
+		loc = x.Locality
+		sipv4 = x.SourceIPV4
+		informer = x.SourcePlugin
+		break
+	}
+	if loc == "" {
+		return fmt.Errorf("invalid locality while sending alert")
+	}
+
+	ad := alertDetails{
+		Principal:       o.ObjectIDString,
+		Locality:        loc,
+		WeightDeviation: o.WeightDeviation,
+		SourceIPV4:      sipv4,
+		Informer:        informer,
+	}
+
+	hname, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+	ac := gozdef.ApiConf{Url: cfg.MozDef.MozDefURL}
+	pub, err := gozdef.InitApi(ac)
+	if err != nil {
+		return err
+	}
+	newev := gozdef.Event{}
+	newev.Notice()
+	newev.Timestamp = time.Now().UTC()
+	newev.Category = "geomodelnotice"
+	newev.ProcessName = os.Args[0]
+	newev.ProcessID = float64(os.Getpid())
+	newev.Hostname = hname
+	newev.Source = "geomodel"
+	newev.Tags = append(newev.Tags, "geomodel")
+	newev.Details = ad
+
+	newev.Summary = fmt.Sprintf("%v NEWLOCALITY (%v) weight_deviation:%v srcipv4:%v informed by %v",
+		ad.Principal, ad.Locality, ad.WeightDeviation, ad.SourceIPV4, ad.Informer)
+
+	err = pub.Send(newev)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (o *object) alertAnalyze() (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("alertAnalyze() -> %v", e)
+		}
+	}()
+
 	o.calculateWeightDeviation()
 	for i := range o.Results {
 		if o.Results[i].Collapsed {
@@ -136,6 +210,10 @@ func (o *object) alertAnalyze() error {
 		}
 		logf("[NOTICE] new geocenter for %v (%v)", o.ObjectIDString, o.Results[i].Locality)
 		o.markEscalated(o.Results[i].BranchID)
+		err := o.sendAlert(o.Results[i].BranchID)
+		if err != nil {
+			panic(err)
+		}
 	}
 	return nil
 }

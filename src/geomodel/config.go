@@ -25,6 +25,10 @@ type Config struct {
 		CollapseMaximum int // Maximum allowable collapse for branch locality (km)
 	}
 
+	MozDef struct {
+		MozDefURL string // URL for MozDef event publishing
+	}
+
 	General struct {
 		Context string // Context name
 		Plugins string // Plugin directory path
@@ -67,6 +71,9 @@ func (c *Config) validate() error {
 	}
 	if c.General.MaxMind == "" {
 		return fmt.Errorf("general..maxmind must be set")
+	}
+	if c.MozDef.MozDefURL == "" {
+		return fmt.Errorf("mozdef..mozdefurl must be set")
 	}
 	if c.Timer.State < 10 {
 		return fmt.Errorf("timer..state must be >= 10")
