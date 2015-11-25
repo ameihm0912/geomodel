@@ -140,6 +140,8 @@ func (s *procState) toObject() (o object, err error) {
 	}
 	o.Context = cfg.General.Context
 	o.State.TimeEndpoint = s.timeEndpoint
+	o.LastUpdated = time.Now().UTC()
+	o.Timestamp = o.LastUpdated
 	return o, nil
 }
 

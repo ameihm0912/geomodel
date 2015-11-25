@@ -91,6 +91,7 @@ func mergeResults(principal string, res []eventResult) (err error) {
 
 	// Update the lastupdated timestamp
 	o.LastUpdated = time.Now().UTC()
+	o.Timestamp = o.LastUpdated
 
 	err = savePrincipalState(o)
 	if err != nil {

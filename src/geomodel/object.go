@@ -30,6 +30,7 @@ type object struct {
 	LastUpdated     time.Time       `json:"last_updated"`
 	WeightDeviation float64         `json:"weight_deviation"`
 	NumCenters      int             `json:"numcenters"`
+	Timestamp       time.Time       `json:"utctimestamp"`
 }
 
 func (o *object) addEventResult(e eventResult) (err error) {
