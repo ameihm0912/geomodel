@@ -40,6 +40,7 @@ type Config struct {
 		MaxQueryWindow int    // Maximum query window in seconds
 		Merge          int    // Merge interval in seconds
 		ExpireEvents   string // time.Duration specifying how to prune events
+		Offset         string // time.Duration specifying standoff for query window
 	}
 
 	// Not expected to be in the configuration file, but other options we
@@ -87,6 +88,12 @@ func (c *Config) validate() error {
 	}
 	if c.Timer.ExpireEvents == "" {
 		return fmt.Errorf("timer..expireevents must be set")
+	}
+	if c.Timer.Offset != "" {
+		_, err := time.ParseDuration(c.Timer.Offset)
+		if err != nil {
+			return err
+		}
 	}
 	_, err := time.ParseDuration(c.Timer.ExpireEvents)
 	if err != nil {

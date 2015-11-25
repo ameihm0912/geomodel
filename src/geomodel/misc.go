@@ -10,6 +10,7 @@ package main
 import (
 	"crypto/sha256"
 	"fmt"
+	"time"
 )
 
 // Given an identifier for an object in the state index, produce the id
@@ -27,4 +28,16 @@ func getObjectID(n string) (ret string, err error) {
 	idstr := fmt.Sprintf("id-%v-%v", cfg.General.Context, n)
 	h.Write([]byte(idstr))
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
+func timeWithOffset() time.Time {
+	ret := time.Now().UTC()
+	if cfg.Timer.Offset != "" {
+		dur, err := time.ParseDuration(cfg.Timer.Offset)
+		if err != nil {
+			panic(err)
+		}
+		ret = ret.Add(-1 * dur)
+	}
+	return ret
 }

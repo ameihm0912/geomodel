@@ -147,7 +147,7 @@ func (s *procState) toObject() (o object, err error) {
 
 // Initialize a new state object
 func (s *procState) newState() {
-	s.timeEndpoint = time.Now().UTC()
+	s.timeEndpoint = timeWithOffset()
 	if cfg.initialOffset != 0 {
 		s.timeEndpoint = s.timeEndpoint.Add(-1 * time.Duration(cfg.initialOffset) * time.Second)
 	}
@@ -217,7 +217,7 @@ func dispatchQueries() (err error) {
 		}
 	}()
 
-	newEndpoint := time.Now().UTC()
+	newEndpoint := timeWithOffset()
 
 	// Generate a query request for intervals from the last known endpoint
 	// up until our new endpoint value
