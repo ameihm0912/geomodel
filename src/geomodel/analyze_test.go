@@ -485,6 +485,30 @@ func testtab4FuncPost() error {
 				return fmt.Errorf("a result entry was not escalated")
 			}
 		}
+
+		// Locate the branch entry last created and validate alert
+		// generation
+		testStr := "user@host.com NEWLOCATION Taipei, Taiwan access from "
+		testStr += "118.163.10.187 (test) [deviation:12.5]"
+		var o objectResult
+		for _, x := range v.Results {
+			if x.Collapsed {
+				continue
+			}
+			if x.SourceIPV4 != "118.163.10.187" {
+				continue
+			}
+			o = x
+			break
+		}
+		ad, err := v.createAlertDetails(o.BranchID)
+		if err != nil {
+			return err
+		}
+		sumstr := ad.makeSummary()
+		if sumstr != testStr {
+			return fmt.Errorf("alert summary did not match")
+		}
 	}
 	return nil
 }
