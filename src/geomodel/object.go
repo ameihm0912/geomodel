@@ -143,10 +143,13 @@ func (o *object) createAlertDetails(branchID string) (ret alertDetails, err erro
 			continue
 		}
 		ret.Locality = x.Locality
+		ret.Latitude = x.Latitude
+		ret.Longitude = x.Longitude
 		ret.SourceIPV4 = x.SourceIPV4
 		ret.Informer = x.SourcePlugin
 		ret.Principal = o.ObjectIDString
 		ret.WeightDeviation = o.WeightDeviation
+		ret.Timestamp = o.Timestamp
 		break
 	}
 	if ret.Locality == "" {
@@ -163,6 +166,10 @@ func (o *object) sendAlert(branchID string) (err error) {
 	}()
 
 	ad, err := o.createAlertDetails(branchID)
+	if err != nil {
+		panic(err)
+	}
+	err = ad.addPreviousEvent(o, branchID)
 	if err != nil {
 		panic(err)
 	}
@@ -254,16 +261,70 @@ type objectResult struct {
 
 // Describes an individual alert
 type alertDetails struct {
-	Principal       string  `json:"principal"`
-	Locality        string  `json:"locality"`
-	WeightDeviation float64 `json:"weight_deviation"`
-	SourceIPV4      string  `json:"source_ipv4"`
-	Informer        string  `json:"informer"`
+	Principal       string    `json:"principal"`
+	Locality        string    `json:"locality"`
+	Latitude        float64   `json:"latitude"`
+	Longitude       float64   `json:"longitude"`
+	Timestamp       time.Time `json:"event_time"`
+	WeightDeviation float64   `json:"weight_deviation"`
+	SourceIPV4      string    `json:"source_ipv4"`
+	Informer        string    `json:"informer"`
+
+	PrevLocality  string    `json:"prev_locality"`
+	PrevLatitude  float64   `json:"prev_latitude"`
+	PrevLongitude float64   `json:"prev_longitude"`
+	PrevTimestamp time.Time `json:"prev_timestamp"`
+	PrevDistance  float64   `json:"prev_distance"`
 }
 
 func (ad *alertDetails) makeSummary() string {
 	ret := fmt.Sprintf("%v NEWLOCATION %v access from %v (%v)", ad.Principal,
 		ad.Locality, ad.SourceIPV4, ad.Informer)
 	ret += fmt.Sprintf(" [deviation:%v]", ad.WeightDeviation)
+	if ad.PrevLocality != "" {
+		dur := ad.Timestamp.Sub(ad.PrevTimestamp)
+		hs := dur.Hours()
+		var sstr string
+		if hs > 1 {
+			sstr = fmt.Sprintf("approx %.2f hours before", dur.Hours())
+		} else {
+			sstr = "within hour before"
+		}
+		ret += fmt.Sprintf(" last activity was from %v %v", ad.PrevLocality, sstr)
+	}
 	return ret
+}
+
+// Locate the event in this object that is unrelated to the alert event,
+// and is closest to it based on the timestamp
+func (ad *alertDetails) addPreviousEvent(o *object, branchID string) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("addPreviousEvent() -> %v", e)
+		}
+	}()
+
+	var res *objectResult
+	var latest time.Time
+	for i := range o.Results {
+		if o.Results[i].BranchID == branchID {
+			continue
+		} else if o.Results[i].CollapseBranch == branchID {
+			continue
+		}
+		if latest.Before(o.Results[i].Timestamp) {
+			res = &o.Results[i]
+		}
+	}
+	if res == nil {
+		return nil
+	}
+
+	ad.PrevLocality = res.Locality
+	ad.PrevLatitude = res.Latitude
+	ad.PrevLongitude = res.Longitude
+	ad.PrevTimestamp = res.Timestamp
+	ad.PrevDistance = km_between_two_points(ad.Latitude, ad.Longitude,
+		ad.PrevLatitude, ad.PrevLongitude)
+	return nil
 }

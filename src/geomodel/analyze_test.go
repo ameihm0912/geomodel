@@ -490,6 +490,7 @@ func testtab4FuncPost() error {
 		// generation
 		testStr := "user@host.com NEWLOCATION Taipei, Taiwan access from "
 		testStr += "118.163.10.187 (test) [deviation:12.5]"
+		testStr += " last activity was from San Francisco, United States within hour before"
 		var o objectResult
 		for _, x := range v.Results {
 			if x.Collapsed {
@@ -502,6 +503,10 @@ func testtab4FuncPost() error {
 			break
 		}
 		ad, err := v.createAlertDetails(o.BranchID)
+		if err != nil {
+			return err
+		}
+		err = ad.addPreviousEvent(&v, o.BranchID)
 		if err != nil {
 			return err
 		}
