@@ -490,7 +490,8 @@ func testtab4FuncPost() error {
 		// generation
 		testStr := "user@host.com NEWLOCATION Taipei, Taiwan access from "
 		testStr += "118.163.10.187 (test) [deviation:12.5]"
-		testStr += " last activity was from San Francisco, United States within hour before"
+		testStr += " last activity was from San Francisco, United States "
+		testStr += "(10371 km away) within hour before"
 		var o objectResult
 		for _, x := range v.Results {
 			if x.Collapsed {

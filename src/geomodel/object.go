@@ -290,7 +290,8 @@ func (ad *alertDetails) makeSummary() string {
 		} else {
 			sstr = "within hour before"
 		}
-		ret += fmt.Sprintf(" last activity was from %v %v", ad.PrevLocality, sstr)
+		ret += fmt.Sprintf(" last activity was from %v (%.0f km away) %v", ad.PrevLocality,
+			ad.PrevDistance, sstr)
 	}
 	return ret
 }
