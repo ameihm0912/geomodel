@@ -128,18 +128,13 @@ func (o *object) markEscalated(branchID string) {
 	}
 }
 
-func (o *object) sendAlert(branchID string) (err error) {
-	type alertDetails struct {
-		Principal       string  `json:"principal"`
-		Locality        string  `json:"locality"`
-		WeightDeviation float64 `json:"weight_deviation"`
-		SourceIPV4      string  `json:"source_ipv4"`
-		Informer        string  `json:"informer"`
-	}
+func (o *object) createAlertDetails(branchID string) (ret alertDetails, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("createAlertDetails() -> %v", e)
+		}
+	}()
 
-	var loc string
-	var sipv4 string
-	var informer string
 	for _, x := range o.Results {
 		if x.Collapsed {
 			continue
@@ -147,31 +142,38 @@ func (o *object) sendAlert(branchID string) (err error) {
 		if x.BranchID != branchID {
 			continue
 		}
-		loc = x.Locality
-		sipv4 = x.SourceIPV4
-		informer = x.SourcePlugin
+		ret.Locality = x.Locality
+		ret.SourceIPV4 = x.SourceIPV4
+		ret.Informer = x.SourcePlugin
+		ret.Principal = o.ObjectIDString
+		ret.WeightDeviation = o.WeightDeviation
 		break
 	}
-	if loc == "" {
-		return fmt.Errorf("invalid locality while sending alert")
+	if ret.Locality == "" {
+		panic(err)
 	}
+	return ret, nil
+}
 
-	ad := alertDetails{
-		Principal:       o.ObjectIDString,
-		Locality:        loc,
-		WeightDeviation: o.WeightDeviation,
-		SourceIPV4:      sipv4,
-		Informer:        informer,
+func (o *object) sendAlert(branchID string) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("sendAlert() -> %v", e)
+		}
+	}()
+
+	ad, err := o.createAlertDetails(branchID)
+	if err != nil {
+		panic(err)
 	}
-
 	hname, err := os.Hostname()
 	if err != nil {
-		return err
+		panic(err)
 	}
 	ac := gozdef.ApiConf{Url: cfg.MozDef.MozDefURL}
 	pub, err := gozdef.InitApi(ac)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	newev := gozdef.Event{}
 	newev.Notice()
@@ -183,13 +185,11 @@ func (o *object) sendAlert(branchID string) (err error) {
 	newev.Source = "geomodel"
 	newev.Tags = append(newev.Tags, "geomodel")
 	newev.Details = ad
-
-	newev.Summary = fmt.Sprintf("%v NEWLOCALITY (%v) weight_deviation:%v srcipv4:%v informed by %v",
-		ad.Principal, ad.Locality, ad.WeightDeviation, ad.SourceIPV4, ad.Informer)
+	newev.Summary = ad.makeSummary()
 
 	err = pub.Send(newev)
 	if err != nil {
-		return err
+		panic(err)
 	}
 	return nil
 }
@@ -250,4 +250,20 @@ type objectResult struct {
 
 	Collapsed      bool   `json:"collapsed"`
 	CollapseBranch string `json:"collapse_branch,omitempty"`
+}
+
+// Describes an individual alert
+type alertDetails struct {
+	Principal       string  `json:"principal"`
+	Locality        string  `json:"locality"`
+	WeightDeviation float64 `json:"weight_deviation"`
+	SourceIPV4      string  `json:"source_ipv4"`
+	Informer        string  `json:"informer"`
+}
+
+func (ad *alertDetails) makeSummary() string {
+	ret := fmt.Sprintf("%v NEWLOCATION %v access from %v (%v)", ad.Principal,
+		ad.Locality, ad.SourceIPV4, ad.Informer)
+	ret += fmt.Sprintf(" [deviation:%v]", ad.WeightDeviation)
+	return ret
 }
