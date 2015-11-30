@@ -292,6 +292,8 @@ func (ad *alertDetails) makeSummary() string {
 		}
 		ret += fmt.Sprintf(" last activity was from %v (%.0f km away) %v", ad.PrevLocality,
 			ad.PrevDistance, sstr)
+	} else {
+		ret += ", no previous locations stored in window"
 	}
 	return ret
 }
