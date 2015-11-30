@@ -10,7 +10,13 @@ package main
 // Define the settings used to create the state index in ElasticSearch
 
 type stateSettings struct {
-	Mappings stateMappings `json:"mappings"`
+	Mappings stateMappings   `json:"mappings"`
+	Settings inStateSettings `json:"settings"`
+}
+
+type inStateSettings struct {
+	Shards   int `json:"number_of_shards"`
+	Replicas int `json:"number_of_replicas"`
 }
 
 type stateMappings struct {
@@ -35,6 +41,10 @@ type stateValueProperties struct {
 // elastigo CreateIndexWithSettings()
 func getStateSettings() stateSettings {
 	return stateSettings{
+		Settings: inStateSettings{
+			Shards:   2,
+			Replicas: 1,
+		},
 		Mappings: stateMappings{
 			GMS: stateGMS{
 				Properties: stateProperties{
