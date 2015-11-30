@@ -71,7 +71,7 @@ func geoCollapseUsing(o *object, tres objectResult) float64 {
 		la2 := p0.Latitude
 		lo1 := tres.Longitude
 		lo2 := p0.Longitude
-		dist := km_between_two_points(la1, lo1, la2, lo2)
+		dist := kmBetweenTwoPoints(la1, lo1, la2, lo2)
 		if dist > float64(cfg.Geo.CollapseMaximum) {
 			continue
 		}
@@ -116,40 +116,40 @@ func geoCollapse(o *object) (err error) {
 }
 
 func geoFindGeocenter(o object) (gc objectGeocenter, err error) {
-	var lat, lon_gw, lon_dl float64
+	var lat, lonGw, lonDl float64
 	// First pass: calculate two geocenters: one on the greenwich meridian
 	// and one of the dateline meridian
 	for _, loc := range o.Results {
 		lat += (loc.Latitude * loc.Weight)
-		lon_gw += (loc.Longitude * loc.Weight)
-		lon_dl += (switch_meridians(loc.Longitude) * loc.Weight)
+		lonGw += (loc.Longitude * loc.Weight)
+		lonDl += (switchMeridians(loc.Longitude) * loc.Weight)
 		gc.Weight += loc.Weight
 	}
 	lat /= gc.Weight
-	lon_gw /= gc.Weight
-	lon_dl /= gc.Weight
-	lon_dl = switch_meridians(lon_dl)
+	lonGw /= gc.Weight
+	lonDl /= gc.Weight
+	lonDl = switchMeridians(lonDl)
 
 	// Second pass: calculate the distance of each location to the greenwich
 	// meridian and the dateline meridian. The average distance that is the
 	// shortest indicates which meridian is appropriate to use.
-	var dist_to_gw, avg_dist_to_gw, dist_to_dl, avg_dist_to_dl float64
+	var distToGw, avgDistToGw, distToDl, avgDistToDl float64
 	for _, loc := range o.Results {
-		dist_to_gw = km_between_two_points(loc.Latitude, loc.Longitude, lat, lon_gw)
-		avg_dist_to_gw += (dist_to_gw * loc.Weight)
-		dist_to_dl = km_between_two_points(loc.Latitude, loc.Longitude, lat, lon_dl)
-		avg_dist_to_dl += (dist_to_dl * loc.Weight)
+		distToGw = kmBetweenTwoPoints(loc.Latitude, loc.Longitude, lat, lonGw)
+		avgDistToGw += (distToGw * loc.Weight)
+		distToDl = kmBetweenTwoPoints(loc.Latitude, loc.Longitude, lat, lonDl)
+		avgDistToDl += (distToDl * loc.Weight)
 	}
-	avg_dist_to_gw /= gc.Weight
-	avg_dist_to_dl /= gc.Weight
-	if avg_dist_to_gw > avg_dist_to_dl {
+	avgDistToGw /= gc.Weight
+	avgDistToDl /= gc.Weight
+	if avgDistToGw > avgDistToDl {
 		// average distance to greenwich meridian is longer than average distance
 		// to dateline meridian, so the dateline meridian is our geocenter
-		gc.Longitude = lon_dl
-		gc.AvgDist = avg_dist_to_dl
+		gc.Longitude = lonDl
+		gc.AvgDist = avgDistToDl
 	} else {
-		gc.Longitude = lon_gw
-		gc.AvgDist = avg_dist_to_gw
+		gc.Longitude = lonGw
+		gc.AvgDist = avgDistToGw
 	}
 	gc.Latitude = lat
 	return gc, nil
@@ -169,7 +169,7 @@ func hsin(theta float64) float64 {
 //
 // distance returned is Kilometers
 // http://en.wikipedia.org/wiki/Haversine_formula
-func km_between_two_points(lat1, lon1, lat2, lon2 float64) float64 {
+func kmBetweenTwoPoints(lat1, lon1, lat2, lon2 float64) float64 {
 	// convert to radians
 	// must cast radius as float to multiply later
 	var la1, lo1, la2, lo2, r float64
@@ -186,7 +186,7 @@ func km_between_two_points(lat1, lon1, lat2, lon2 float64) float64 {
 	return 2 * r * math.Asin(math.Sqrt(h))
 }
 
-func switch_meridians(lon float64) float64 {
+func switchMeridians(lon float64) float64 {
 	if lon < 0.0 {
 		return lon + 180.0
 	}

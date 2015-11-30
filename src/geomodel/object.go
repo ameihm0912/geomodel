@@ -327,7 +327,7 @@ func (ad *alertDetails) addPreviousEvent(o *object, branchID string) (err error)
 	ad.PrevLatitude = res.Latitude
 	ad.PrevLongitude = res.Longitude
 	ad.PrevTimestamp = res.Timestamp
-	ad.PrevDistance = km_between_two_points(ad.Latitude, ad.Longitude,
+	ad.PrevDistance = kmBetweenTwoPoints(ad.Latitude, ad.Longitude,
 		ad.PrevLatitude, ad.PrevLongitude)
 	return nil
 }
