@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-type Config struct {
+type config struct {
 	ES struct {
 		StateESHost string // ElasticSearch host for state information
 		EventESHost string // ElasticSearch host for event information
@@ -50,9 +50,9 @@ type Config struct {
 	noSendAlert      bool // Don't send alerts to MozDef
 }
 
-var cfg Config
+var cfg config
 
-func (c *Config) validate() error {
+func (c *config) validate() error {
 	if c.ES.StateESHost == "" {
 		return fmt.Errorf("es..stateeshost must be set")
 	}
@@ -102,7 +102,7 @@ func (c *Config) validate() error {
 	return nil
 }
 
-func (c *Config) loadConfiguration(path string) error {
+func (c *config) loadConfiguration(path string) error {
 	err := gcfg.ReadFileInto(&cfg, path)
 	if err != nil {
 		return err

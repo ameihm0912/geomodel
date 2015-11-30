@@ -59,7 +59,7 @@ func geoObjectResult(o *objectResult) (err error) {
 // Collapse branches in the object based on proximity to tres; the number of
 // branches collapsed during the operation is returned
 func geoCollapseUsing(o *object, tres objectResult) float64 {
-	var ret float64 = 0
+	var ret float64
 	for i := range o.Results {
 		p0 := &o.Results[i]
 

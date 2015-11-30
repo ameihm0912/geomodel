@@ -72,7 +72,7 @@ func (o *object) newFromPrincipal(principal string) {
 }
 
 func (o *object) pruneExpiredEvents() error {
-	newres := make([]objectResult, 0)
+	var newres []objectResult
 	for _, x := range o.Results {
 		dur, err := time.ParseDuration(cfg.Timer.ExpireEvents)
 		if err != nil {
@@ -103,7 +103,7 @@ func (o *object) calculateWeightDeviation() {
 		o.WeightDeviation = 0
 		return
 	}
-	var t0 float64 = 0
+	var t0 float64
 	for _, x := range fset {
 		t0 += x
 	}

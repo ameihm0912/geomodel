@@ -23,7 +23,7 @@ type stateService interface {
 	doInit() error
 }
 
-var stateServ stateService = nil
+var stateServ stateService
 
 type esStateService struct {
 	stateDomain string
