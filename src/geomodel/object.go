@@ -149,7 +149,7 @@ func (o *object) createAlertDetails(branchID string) (ret alertDetails, err erro
 		ret.Informer = x.SourcePlugin
 		ret.Principal = o.ObjectIDString
 		ret.WeightDeviation = o.WeightDeviation
-		ret.Timestamp = o.Timestamp
+		ret.Timestamp = x.Timestamp
 		break
 	}
 	if ret.Locality == "" {
