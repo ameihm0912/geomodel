@@ -65,6 +65,7 @@ func queryUsingPlugin(p plugin, req queryRequest) (err error) {
 	}
 	querybuf := fmt.Sprintf(template, temp, req.startTime.Format(time.RFC3339), req.endTime.Format(time.RFC3339))
 	conn := elastigo.NewConn()
+	defer conn.Close()
 	conn.Domain = cfg.ES.EventESHost
 	res, err := conn.Search(cfg.ES.EventIndex, "", nil, querybuf)
 	if err != nil {

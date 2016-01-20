@@ -32,6 +32,7 @@ type esStateService struct {
 
 func (e *esStateService) writeObject(o object) (err error) {
 	conn := elastigo.NewConn()
+	defer conn.Close()
 	conn.Domain = e.stateDomain
 	_, err = conn.Index(e.stateIndex, "geomodel_state", o.ObjectID, nil, o)
 	if err != nil {
@@ -42,6 +43,7 @@ func (e *esStateService) writeObject(o object) (err error) {
 
 func (e *esStateService) readObject(objid string) (o *object, err error) {
 	conn := elastigo.NewConn()
+	defer conn.Close()
 	conn.Domain = e.stateDomain
 
 	template := `{
@@ -91,6 +93,7 @@ func (e *esStateService) stateIndexInit() (err error) {
 	}()
 
 	conn := elastigo.NewConn()
+	defer conn.Close()
 	conn.Domain = e.stateDomain
 
 	if cfg.deleteStateIndex {
