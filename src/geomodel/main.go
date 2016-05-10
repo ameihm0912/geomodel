@@ -84,10 +84,12 @@ func logger() {
 }
 
 func main() {
+	var durstring = flag.String("b", "1h", "indicate how far to query back in plugin test")
 	var delIndex = flag.Bool("D", false, "delete and recreate state index on startup")
 	var confPath = flag.String("f", "etc/geomodel.conf", "configuration path")
 	var nsAlert = flag.Bool("n", false, "dont send alerts to mozdef")
 	var initOff = flag.Int("o", 0, "initial state offset in seconds")
+	var pluginTest = flag.String("p", "", "test plugin; specify plugin name")
 	var eventIdx = flag.String("I", "", "override event index name from config file")
 	flag.Parse()
 
@@ -127,6 +129,16 @@ func main() {
 		os.Exit(2)
 	}
 
+	// If we are in plugin test mode, bypass the standard startup
+	if *pluginTest != "" {
+		err = runPluginTest(*pluginTest, *durstring)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error in plugin test: %v\n", err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
 	// Start the other primary routines
 	startRoutines()
 	logf("routines exited, waiting for logger to finish")
@@ -134,4 +146,50 @@ func main() {
 	wg.Wait()
 	fmt.Fprintf(os.Stdout, "exiting\n")
 	os.Exit(0)
+}
+
+func runPluginTest(pname string, durstring string) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("runPluginTest() -> %v", e)
+		}
+	}()
+
+	var (
+		duration time.Duration
+		p        *plugin
+	)
+
+	// We'll get the result back on the plugin result channel
+	pluginResultCh = make(chan pluginResult, 128)
+
+	duration, err = time.ParseDuration(durstring)
+	if err != nil {
+		panic(err)
+	}
+	for i := range pluginList {
+		if pluginList[i].name == pname {
+			p = &pluginList[i]
+			break
+		}
+	}
+	if p == nil {
+		panic("plugin not found")
+	}
+	// Create a new query request for the test.
+	now := time.Now().UTC()
+	qr := queryRequest{
+		startTime: now.Add(-1 * duration),
+		endTime:   now,
+	}
+	err = queryUsingPlugin(*p, qr)
+	if err != nil {
+		panic(err)
+	}
+	pr := <-pluginResultCh
+	for _, x := range pr.Results {
+		fmt.Fprintf(os.Stdout, "%v %v %v %v %v\n", x.Timestamp,
+			x.Principal, x.SourceIPV4, x.Valid, x.Name)
+	}
+	return nil
 }
