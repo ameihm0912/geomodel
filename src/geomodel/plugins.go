@@ -101,6 +101,7 @@ type plugin struct {
 	name        string
 	path        string
 	searchTerms []pluginTerm
+	searchQS    []string
 }
 
 func (p *plugin) runPlugin(input []byte) (err error) {
@@ -185,6 +186,9 @@ func pluginFromFile(ppath string) (plugin, error) {
 			nterm.key = args[2]
 			nterm.value = args[3]
 			np.searchTerms = append(np.searchTerms, nterm)
+		} else if args[1] == "@Q" && len(args) >= 4 {
+			qs := strings.Join(args[2:], " ")
+			np.searchQS = append(np.searchQS, qs)
 		}
 	}
 	err = scnr.Err()

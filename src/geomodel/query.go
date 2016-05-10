@@ -63,6 +63,19 @@ func queryUsingPlugin(p plugin, req queryRequest) (err error) {
 		temp += termbuf
 		mult = true
 	}
+	for _, x := range p.searchQS {
+		if mult {
+			temp += ","
+		}
+		qstemplate := `{
+			"query_string": {
+				"query": "%v"
+			}
+		}`
+		qsbuf := fmt.Sprintf(qstemplate, x)
+		temp += qsbuf
+		mult = true
+	}
 	querybuf := fmt.Sprintf(template, temp, req.startTime.Format(time.RFC3339), req.endTime.Format(time.RFC3339))
 	conn := elastigo.NewConn()
 	defer conn.Close()
