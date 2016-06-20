@@ -214,7 +214,8 @@ func loadPlugins() error {
 			return err
 		}
 		pluginList = append(pluginList, newplugin)
-		logf("added plugin %v (%v terms)", newplugin.name, len(newplugin.searchTerms))
+		logf("added plugin %v (%v terms, %v query strings)", newplugin.name,
+			len(newplugin.searchTerms), len(newplugin.searchQS))
 	}
 	return nil
 }
