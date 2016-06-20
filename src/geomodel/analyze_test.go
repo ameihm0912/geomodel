@@ -248,6 +248,31 @@ var testtab7 = testTable{
 	},
 }
 
+var testtab8 = testTable{
+	{
+		phaseType: EVENT,
+		events: []testEvent{
+			{"user@host.com", "63.245.214.133", "", 15},
+		},
+	},
+	{
+		phaseType: EVENT,
+		events: []testEvent{
+			{"user@host.com", "118.163.10.187", "", 5},
+		},
+	},
+	{
+		phaseType: EVENT,
+		events: []testEvent{
+			{"user@host.com", "63.245.214.133", "", 15},
+		},
+	},
+	{
+		phaseType: FUNC,
+		chkFunc:   testtab8Func,
+	},
+}
+
 type simpleStateService struct {
 	store map[string]object
 }
@@ -750,6 +775,32 @@ func testtab7Func() error {
 	return nil
 }
 
+func testtab8Func() error {
+	s := getStateService().(*simpleStateService).getStore()
+	if len(s) != 1 {
+		return fmt.Errorf("more than one entry in state")
+	}
+	for _, v := range s {
+		alert, err := v.analyzeUsageWithinWindow()
+		if err != nil {
+			return err
+		}
+		if len(alert) == 0 {
+			return fmt.Errorf("analyzeUsageWithinWindow did not return results")
+		}
+		ad, err := v.createAlertDetailsMovement(alert)
+		if err != nil {
+			return err
+		}
+		sumstr, err := ad.makeSummary()
+		if err != nil {
+			return err
+		}
+		fmt.Println(sumstr)
+	}
+	return nil
+}
+
 func TestAnalyzeTab0(t *testing.T) {
 	runTestTable(testtab0, t)
 }
@@ -780,4 +831,8 @@ func TestAnalyzeTab6(t *testing.T) {
 
 func TestAnalyzeTab7(t *testing.T) {
 	runTestTable(testtab7, t)
+}
+
+func TestAnalyzeTab8(t *testing.T) {
+	runTestTable(testtab8, t)
 }

@@ -289,14 +289,16 @@ func (o *object) alertAnalyze() (err error) {
 	// window, also create an alert for this.
 	//
 	// The distance and time frame are sourced from the configuration file.
-	err = o.analyzeUsageWithinWindow()
+	_, err = o.analyzeUsageWithinWindow()
 	if err != nil {
 		panic(err)
 	}
 	return nil
 }
 
-func (o *object) analyzeUsageWithinWindow() (err error) {
+// Apply movement heuristic to results stored in object; returns true if we would have
+// generated an alert, or false otherwise
+func (o *object) analyzeUsageWithinWindow() (ret []objectResult, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("analyzeUsageWithinWindow() -> %v", e)
@@ -359,7 +361,7 @@ func (o *object) analyzeUsageWithinWindow() (err error) {
 	// If the largest value is less than the movement distance, we are done
 	// here
 	if largest < float64(cfg.Geo.MovementDistance) {
-		return nil
+		return ret, nil
 	}
 
 	// Build the slice of geocenters we want to include in the alert
@@ -375,7 +377,7 @@ func (o *object) analyzeUsageWithinWindow() (err error) {
 		}
 	}
 
-	return nil
+	return alertlist, nil
 }
 
 // Specific to global state tracking
@@ -450,7 +452,7 @@ func (ad *alertDetailsMovement) makeSummary() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		ret += lval
+		ret += "[" + lval + "]"
 	}
 	ret += ")"
 	return ret, nil
