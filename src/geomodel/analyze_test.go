@@ -479,7 +479,19 @@ func testtab4FuncPre() error {
 		if err != nil {
 			return err
 		}
-		sumstr := ad.makeSummary()
+		err = ad.calculateSeverity()
+		if err != nil {
+			return err
+		}
+		// This is a new alert with no previous country details, so we should have
+		// a severity of 1
+		if ad.Severity != 1 {
+			return fmt.Errorf("alert had incorrect severity")
+		}
+		sumstr, err := ad.makeSummary()
+		if err != nil {
+			return err
+		}
 		if sumstr != testStr {
 			return fmt.Errorf("alert summary did not match")
 		}
@@ -539,7 +551,18 @@ func testtab4FuncPost() error {
 		if err != nil {
 			return err
 		}
-		sumstr := ad.makeSummary()
+		err = ad.calculateSeverity()
+		if err != nil {
+			return err
+		}
+		// A new country is present, so we should have a severity of 2
+		if ad.Severity != 2 {
+			return fmt.Errorf("alert had incorrect severity")
+		}
+		sumstr, err := ad.makeSummary()
+		if err != nil {
+			return err
+		}
 		if sumstr != testStr {
 			return fmt.Errorf("alert summary did not match")
 		}

@@ -50,7 +50,8 @@ func geoObjectResult(o *objectResult) (err error) {
 	if countryName == "" {
 		countryName = "Unknown"
 	}
-	o.Locality = cityName + ", " + countryName
+	o.Locality.City = cityName
+	o.Locality.Country = countryName
 	o.Weight = 1
 
 	return nil

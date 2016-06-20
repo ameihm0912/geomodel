@@ -51,6 +51,13 @@ func mergeResults(principal string, res []eventResult) (err error) {
 		panic(err)
 	}
 
+	// Perform any conversions we want to do to upgrade older versions
+	// of state documents to what we expect now
+	err = o.upgradeState()
+	if err != nil {
+		panic(err)
+	}
+
 	// Add new events to the object state
 	for _, x := range res {
 		err = o.addEventResult(x)
