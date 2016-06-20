@@ -347,6 +347,8 @@ func runTestTable(testtab testTable, t *testing.T) {
 func testGenericInit() error {
 	cfg.General.MaxMind = os.Getenv("TESTMMF")
 	cfg.Geo.CollapseMaximum = 500
+	cfg.Geo.MovementDistance = 2000
+	cfg.Geo.MovementWindow = "4h"
 	cfg.Timer.ExpireEvents = "720h"
 	cfg.noSendAlert = true
 	err := maxmindInit()
@@ -490,7 +492,7 @@ func testtab4FuncPre() error {
 			o = x
 			break
 		}
-		ad, err := v.createAlertDetails(o.BranchID)
+		ad, err := v.createAlertDetailsBranch(o.BranchID)
 		if err != nil {
 			return err
 		}
@@ -562,7 +564,7 @@ func testtab4FuncPost() error {
 			o = x
 			break
 		}
-		ad, err := v.createAlertDetails(o.BranchID)
+		ad, err := v.createAlertDetailsBranch(o.BranchID)
 		if err != nil {
 			return err
 		}
@@ -720,7 +722,7 @@ func testtab7Func() error {
 			o = x
 			break
 		}
-		ad, err := v.createAlertDetails(o.BranchID)
+		ad, err := v.createAlertDetailsBranch(o.BranchID)
 		if err != nil {
 			return err
 		}

@@ -18,6 +18,10 @@ import (
 	"time"
 )
 
+type genericAlert interface {
+	makeSummary() (string, error)
+}
+
 // Describes an object stored in the state index used by geomodel. This
 // could represent state metadata associated with entities in a context,
 // or it could be a global state object. We use the same structure for
@@ -155,7 +159,26 @@ func (o *object) markEscalated(branchID string) {
 	}
 }
 
-func (o *object) createAlertDetails(branchID string) (ret alertDetails, err error) {
+func (o *object) createAlertDetailsMovement(objlist []objectResult) (ret alertDetailsMovement, err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("createAlertDetailsMovement() -> %v", e)
+		}
+	}()
+
+	// This alert should have at least two localities in objlist, otherwise
+	// it should not trigger
+	if len(objlist) < 2 {
+		panic("objlist length does not make sense")
+	}
+
+	ret.Localities = objlist
+	ret.Principal = o.ObjectIDString
+
+	return ret, nil
+}
+
+func (o *object) createAlertDetailsBranch(branchID string) (ret alertDetailsBranch, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("createAlertDetails() -> %v", e)
@@ -186,14 +209,32 @@ func (o *object) createAlertDetails(branchID string) (ret alertDetails, err erro
 	return ret, nil
 }
 
-func (o *object) sendAlert(branchID string) (err error) {
+func (o *object) sendMovementAlert(objlist []objectResult) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("sendMovementAlert() -> %v", e)
+		}
+	}()
+
+	ad, err := o.createAlertDetailsMovement(objlist)
+	if err != nil {
+		panic(err)
+	}
+	err = sendAlert(&ad)
+	if err != nil {
+		panic(err)
+	}
+	return nil
+}
+
+func (o *object) sendBranchAlert(branchID string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("sendAlert() -> %v", e)
 		}
 	}()
 
-	ad, err := o.createAlertDetails(branchID)
+	ad, err := o.createAlertDetailsBranch(branchID)
 	if err != nil {
 		panic(err)
 	}
@@ -205,31 +246,7 @@ func (o *object) sendAlert(branchID string) (err error) {
 	if err != nil {
 		panic(err)
 	}
-	hname, err := os.Hostname()
-	if err != nil {
-		panic(err)
-	}
-	ac := gozdef.ApiConf{Url: cfg.MozDef.MozDefURL}
-	pub, err := gozdef.InitApi(ac)
-	if err != nil {
-		panic(err)
-	}
-	newev := gozdef.Event{}
-	newev.Notice()
-	newev.Timestamp = time.Now().UTC()
-	newev.Category = "geomodelnotice"
-	newev.ProcessName = os.Args[0]
-	newev.ProcessID = float64(os.Getpid())
-	newev.Hostname = hname
-	newev.Source = "geomodel"
-	newev.Tags = append(newev.Tags, "geomodel")
-	newev.Details = ad
-	newev.Summary, err = ad.makeSummary()
-	if err != nil {
-		panic(err)
-	}
-
-	err = pub.Send(newev)
+	err = sendAlert(&ad)
 	if err != nil {
 		panic(err)
 	}
@@ -258,12 +275,106 @@ func (o *object) alertAnalyze() (err error) {
 		logf("[NOTICE] new geocenter for %v (%v)", o.ObjectIDString, lval)
 		o.markEscalated(o.Results[i].BranchID)
 		if !cfg.noSendAlert {
-			err := o.sendAlert(o.Results[i].BranchID)
+			err := o.sendBranchAlert(o.Results[i].BranchID)
 			if err != nil {
 				panic(err)
 			}
 		}
 	}
+
+	// Now that new gencenters have been handled, apply a heuristic on the entire
+	// state to create any additional alerts required. Given a window of time, get
+	// a list of all authentication events that have occurred. If we see events
+	// occuring within that window, where the distance is unreasonable given the
+	// window, also create an alert for this.
+	//
+	// The distance and time frame are sourced from the configuration file.
+	err = o.analyzeUsageWithinWindow()
+	if err != nil {
+		panic(err)
+	}
+	return nil
+}
+
+func (o *object) analyzeUsageWithinWindow() (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("analyzeUsageWithinWindow() -> %v", e)
+		}
+	}()
+
+	dur, err := time.ParseDuration(cfg.Geo.MovementWindow)
+	if err != nil {
+		panic(err)
+	}
+	cutoff := time.Now().UTC().Add(-1 * dur)
+
+	resl := make([]objectResult, 0)
+
+	// Build a slice of all the results we want to consider
+	for _, x := range o.Results {
+		if x.Timestamp.Before(cutoff) {
+			continue
+		}
+		resl = append(resl, x)
+	}
+
+	// Filter this list down further to the latest event in each geocenter within
+	// the window
+	geocenters := make(map[string]objectResult)
+	for _, x := range resl {
+		var bid string
+		if x.Collapsed {
+			bid = x.CollapseBranch
+		} else {
+			bid = x.BranchID
+		}
+
+		compval, ok := geocenters[bid]
+		if !ok {
+			geocenters[bid] = x
+			continue
+		}
+		if x.Timestamp.After(compval.Timestamp) {
+			geocenters[bid] = x
+		}
+	}
+
+	// Compare the distances between each of our candidate results, if any
+	// exceed the configuration movement distance create an alert for this.
+	largest := 0.0
+	for k1, v1 := range geocenters {
+		for k2, v2 := range geocenters {
+			if k2 == k1 {
+				continue
+			}
+			dv := kmBetweenTwoPoints(v1.Latitude, v1.Longitude,
+				v2.Latitude, v2.Longitude)
+			if dv > largest {
+				largest = dv
+			}
+		}
+	}
+
+	// If the largest value is less than the movement distance, we are done
+	// here
+	if largest < float64(cfg.Geo.MovementDistance) {
+		return nil
+	}
+
+	// Build the slice of geocenters we want to include in the alert
+	alertlist := make([]objectResult, 0)
+	for _, v := range geocenters {
+		alertlist = append(alertlist, v)
+	}
+
+	if !cfg.noSendAlert {
+		err = o.sendMovementAlert(alertlist)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	return nil
 }
 
@@ -319,8 +430,34 @@ type objectResult struct {
 	OldLocality string `json:"locality,omitempty"`
 }
 
-// Describes an individual alert
-type alertDetails struct {
+// Describes an individual alert for a movement hit
+type alertDetailsMovement struct {
+	Principal  string         `json:"principal"`
+	Localities []objectResult `json:"localities"`
+}
+
+func (ad *alertDetailsMovement) makeSummary() (string, error) {
+	ret := fmt.Sprintf("%v MOVEMENT window violation (", ad.Principal)
+	iv := len(ad.Localities)
+	if iv > 3 {
+		iv = 3
+	}
+	for i := 0; i < iv; i++ {
+		if i > 0 {
+			ret += ","
+		}
+		lval, err := ad.Localities[i].Locality.assemble()
+		if err != nil {
+			return "", err
+		}
+		ret += lval
+	}
+	ret += ")"
+	return ret, nil
+}
+
+// Describes an individual alert for a branch
+type alertDetailsBranch struct {
 	Principal       string    `json:"principal"`
 	Locality        Locality  `json:"locality_details"`
 	Latitude        float64   `json:"latitude"`
@@ -338,7 +475,7 @@ type alertDetails struct {
 	PrevDistance  float64   `json:"prev_distance"`
 }
 
-func (ad *alertDetails) makeSummary() (string, error) {
+func (ad *alertDetailsBranch) makeSummary() (string, error) {
 	lval, err := ad.Locality.assemble()
 	if err != nil {
 		return "", err
@@ -367,7 +504,7 @@ func (ad *alertDetails) makeSummary() (string, error) {
 	return ret, nil
 }
 
-func (ad *alertDetails) calculateSeverity() error {
+func (ad *alertDetailsBranch) calculateSeverity() error {
 	// Default to a severity value of 1, we will adjust up based on the
 	// outcome of this function.
 	ad.Severity = 1
@@ -384,7 +521,7 @@ func (ad *alertDetails) calculateSeverity() error {
 
 // Locate the event in this object that is unrelated to the alert event,
 // and is closest to it based on the timestamp
-func (ad *alertDetails) addPreviousEvent(o *object, branchID string) (err error) {
+func (ad *alertDetailsBranch) addPreviousEvent(o *object, branchID string) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("addPreviousEvent() -> %v", e)
@@ -413,5 +550,45 @@ func (ad *alertDetails) addPreviousEvent(o *object, branchID string) (err error)
 	ad.PrevTimestamp = res.Timestamp
 	ad.PrevDistance = kmBetweenTwoPoints(ad.Latitude, ad.Longitude,
 		ad.PrevLatitude, ad.PrevLongitude)
+	return nil
+}
+
+func sendAlert(d genericAlert) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("sendAlert() -> %v", e)
+		}
+	}()
+
+	hname, err := os.Hostname()
+	if err != nil {
+		panic(err)
+	}
+
+	ac := gozdef.ApiConf{Url: cfg.MozDef.MozDefURL}
+	pub, err := gozdef.InitApi(ac)
+	if err != nil {
+		panic(err)
+	}
+	newev := gozdef.Event{}
+	newev.Notice()
+	newev.Timestamp = time.Now().UTC()
+	newev.Category = "geomodelnotice"
+	newev.ProcessName = os.Args[0]
+	newev.ProcessID = float64(os.Getpid())
+	newev.Hostname = hname
+	newev.Source = "geomodel"
+	newev.Tags = append(newev.Tags, "geomodel")
+	newev.Details = d
+	newev.Summary, err = d.makeSummary()
+	if err != nil {
+		panic(err)
+	}
+
+	err = pub.Send(newev)
+	if err != nil {
+		panic(err)
+	}
+
 	return nil
 }
