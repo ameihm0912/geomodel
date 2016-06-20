@@ -229,6 +229,25 @@ var testtab6 = testTable{
 	},
 }
 
+var testtab7 = testTable{
+	{
+		phaseType: EVENT,
+		events: []testEvent{
+			{"user@host.com", "63.245.214.133", "", 15},
+		},
+	},
+	{
+		phaseType: EVENT,
+		events: []testEvent{
+			{"user@host.com", "207.126.102.129", "", 5},
+		},
+	},
+	{
+		phaseType: FUNC,
+		chkFunc:   testtab7Func,
+	},
+}
+
 type simpleStateService struct {
 	store map[string]object
 }
@@ -657,6 +676,78 @@ func testtab6FuncFinal() error {
 	return nil
 }
 
+func testtab7Func() error {
+	s := getStateService().(*simpleStateService).getStore()
+	if len(s) != 1 {
+		return fmt.Errorf("more than one entry in state")
+	}
+	for _, v := range s {
+		if v.WeightDeviation == 0 {
+			return fmt.Errorf("weight threshold was 0")
+		}
+		if v.NumCenters != 2 {
+			return fmt.Errorf("incorrect number of geocenters")
+		}
+		collapseCnt := 0
+		for _, x := range v.Results {
+			if x.Collapsed {
+				collapseCnt++
+			}
+		}
+		if collapseCnt != 18 {
+			return fmt.Errorf("incorrect number of collapsed results")
+		}
+		for _, x := range v.Results {
+			if !x.Escalated {
+				return fmt.Errorf("a result entry was not escalated")
+			}
+		}
+
+		// Locate the branch entry last created and validate alert
+		// generation
+		testStr := "user@host.com NEWLOCATION Portland, United States access from "
+		testStr += "207.126.102.129 (test) [deviation:5]"
+		testStr += " last activity was from San Francisco, United States "
+		testStr += "(863 km away) within hour before"
+		var o objectResult
+		for _, x := range v.Results {
+			if x.Collapsed {
+				continue
+			}
+			if x.SourceIPV4 != "207.126.102.129" {
+				continue
+			}
+			o = x
+			break
+		}
+		ad, err := v.createAlertDetails(o.BranchID)
+		if err != nil {
+			return err
+		}
+		err = ad.addPreviousEvent(&v, o.BranchID)
+		if err != nil {
+			return err
+		}
+		err = ad.calculateSeverity()
+		if err != nil {
+			return err
+		}
+		// This was a locality change in the same country, we should have
+		// a severity of 1
+		if ad.Severity != 1 {
+			return fmt.Errorf("alert had incorrect severity")
+		}
+		sumstr, err := ad.makeSummary()
+		if err != nil {
+			return err
+		}
+		if sumstr != testStr {
+			return fmt.Errorf("alert summary did not match")
+		}
+	}
+	return nil
+}
+
 func TestAnalyzeTab0(t *testing.T) {
 	runTestTable(testtab0, t)
 }
@@ -683,4 +774,8 @@ func TestAnalyzeTab5(t *testing.T) {
 
 func TestAnalyzeTab6(t *testing.T) {
 	runTestTable(testtab6, t)
+}
+
+func TestAnalyzeTab7(t *testing.T) {
+	runTestTable(testtab7, t)
 }
