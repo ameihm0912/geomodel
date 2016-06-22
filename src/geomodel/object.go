@@ -385,6 +385,25 @@ func (o *object) analyzeUsageWithinWindow() (ret []objectResult, err error) {
 	}
 	sort.Sort(alertlist)
 
+	// If the result list contains geocenters that are all localized to the
+	// same country, skip creating a movement alert for this.
+	tval := ""
+	variance := false
+	for _, v := range alertlist {
+		if tval == "" {
+			tval = v.Locality.Country
+			continue
+		}
+		if v.Locality.Country != tval {
+			variance = true
+			break
+		}
+	}
+	if !variance {
+		ret = ret[:0]
+		return ret, nil
+	}
+
 	if !cfg.noSendAlert {
 		err = o.sendMovementAlert(alertlist)
 		if err != nil {
