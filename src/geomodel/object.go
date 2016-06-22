@@ -233,6 +233,7 @@ func (o *object) sendMovementAlert(objlist []objectResult) (err error) {
 	if err != nil {
 		panic(err)
 	}
+	ad.Severity = 3
 	err = sendAlert(&ad)
 	if err != nil {
 		panic(err)
@@ -466,25 +467,28 @@ func (ors objectResults) Swap(i, j int) {
 type alertDetailsMovement struct {
 	Principal  string         `json:"principal"`
 	Localities []objectResult `json:"localities"`
+	Severity   int            `json:"severity"`
 }
 
 func (ad *alertDetailsMovement) makeSummary() (string, error) {
-	ret := fmt.Sprintf("%v MOVEMENT window violation (", ad.Principal)
-	iv := len(ad.Localities)
-	if iv > 3 {
-		iv = 3
+	ret := fmt.Sprintf("%v MOVEMENT window violation ", ad.Principal)
+	iv := 0
+	if len(ad.Localities) > 3 {
+		iv = len(ad.Localities) - 3
 	}
-	for i := 0; i < iv; i++ {
-		if i > 0 {
-			ret += ","
+	more := false
+	for i := iv; i < len(ad.Localities); i++ {
+		if more {
+			ret += " -> "
 		}
 		lval, err := ad.Localities[i].Locality.assemble()
 		if err != nil {
 			return "", err
 		}
-		ret += "[" + lval + "]"
+		ret += "(" + lval + ")"
+		more = true
 	}
-	ret += ")"
+	ret += fmt.Sprintf(" within %v window", cfg.Geo.MovementWindow)
 	return ret, nil
 }
 

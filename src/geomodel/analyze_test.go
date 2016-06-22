@@ -796,7 +796,12 @@ func testtab8Func() error {
 		if err != nil {
 			return err
 		}
-		fmt.Println(sumstr)
+		testStr := "user@host.com MOVEMENT window violation "
+		testStr += "(Taipei, Taiwan) -> (San Francisco, United States) "
+		testStr += "within 4h window"
+		if sumstr != testStr {
+			return fmt.Errorf("alert summary did not match")
+		}
 	}
 	return nil
 }
