@@ -574,7 +574,7 @@ func testtab4FuncPost() error {
 
 		// Locate the branch entry last created and validate alert
 		// generation
-		testStr := "user@host.com NEWLOCATION Taipei, Taiwan access from "
+		testStr := "user@host.com NEWCOUNTRY Taipei, Taiwan access from "
 		testStr += "118.163.10.187 (test) [deviation:12.5]"
 		testStr += " last activity was from San Francisco, United States "
 		testStr += "(10371 km away) within hour before"

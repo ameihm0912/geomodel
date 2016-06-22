@@ -516,8 +516,12 @@ func (ad *alertDetailsBranch) makeSummary() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	ret := fmt.Sprintf("%v NEWLOCATION %v access from %v (%v)", ad.Principal,
-		lval, ad.SourceIPV4, ad.Informer)
+	category := "NEWLOCATION"
+	if ad.Severity == 2 {
+		category = "NEWCOUNTRY"
+	}
+	ret := fmt.Sprintf("%v %v %v access from %v (%v)", ad.Principal,
+		category, lval, ad.SourceIPV4, ad.Informer)
 	ret += fmt.Sprintf(" [deviation:%v]", ad.WeightDeviation)
 	if ad.PrevLocality.Country != "" && ad.PrevLocality.City != "" {
 		dur := ad.Timestamp.Sub(ad.PrevTimestamp)
