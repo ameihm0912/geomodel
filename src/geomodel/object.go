@@ -34,6 +34,7 @@ type object struct {
 	Results         []objectResult  `json:"results,omitempty"`
 	Geocenter       objectGeocenter `json:"geocenter"`
 	LastUpdated     time.Time       `json:"last_updated"`
+	LastMoveAlert   time.Time       `json:"last_movement_alert"`
 	WeightDeviation float64         `json:"weight_deviation"`
 	NumCenters      int             `json:"numcenters"`
 	Timestamp       time.Time       `json:"utctimestamp"`
@@ -215,6 +216,18 @@ func (o *object) sendMovementAlert(objlist []objectResult) (err error) {
 			err = fmt.Errorf("sendMovementAlert() -> %v", e)
 		}
 	}()
+
+	// Only send the movement alert we haven't sent one recently, just
+	// use the movement window time here
+	dur, err := time.ParseDuration(cfg.Geo.MovementWindow)
+	if err != nil {
+		panic(err)
+	}
+	cutoff := time.Now().UTC().Add(-1 * dur)
+	if !o.LastMoveAlert.IsZero() && o.LastMoveAlert.After(cutoff) {
+		return nil
+	}
+	o.LastMoveAlert = time.Now().UTC()
 
 	ad, err := o.createAlertDetailsMovement(objlist)
 	if err != nil {
