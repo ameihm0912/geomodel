@@ -16,6 +16,16 @@ that is outside the established localities for the user (e.g., not within
 500km of any known login region) results in a new entry for the user, and
 a corresponding event notification in MozDef.
 
+Events have associated severity values. If a new locality is identified for the
+user, the event has a severity of 1. Additionally, if the new locality was also
+in a new country, it has a severity of 2.
+
+In addition to identifying new localities, geomodel will also analyze data
+for a given user to identify authentication occuring within a time window from
+locations that exceed a certain distance apart. For example, if authentication
+is seen occuring for a user from 2 locations that are over 2000km apart, and
+they occurred less than 4 hours apart, a severity 3 event will be created.
+
 Authentication events are expired from the model after 30 days by default. This
 can be configured to increase or reduce the lifetime of data in the model for
 a user.
