@@ -159,7 +159,7 @@ func (o *object) markEscalated(branchID string) {
 	}
 }
 
-func (o *object) createAlertDetailsMovement(objlist []objectResult) (ret alertDetailsMovement, err error) {
+func (o *object) createAlertDetailsMovement(objlist objectResults) (ret alertDetailsMovement, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("createAlertDetailsMovement() -> %v", e)
@@ -365,10 +365,11 @@ func (o *object) analyzeUsageWithinWindow() (ret []objectResult, err error) {
 	}
 
 	// Build the slice of geocenters we want to include in the alert
-	alertlist := make([]objectResult, 0)
+	var alertlist objectResults
 	for _, v := range geocenters {
 		alertlist = append(alertlist, v)
 	}
+	sort.Sort(alertlist)
 
 	if !cfg.noSendAlert {
 		err = o.sendMovementAlert(alertlist)
@@ -430,6 +431,22 @@ type objectResult struct {
 
 	// Compatibility with older state documents
 	OldLocality string `json:"locality,omitempty"`
+}
+
+// Define a new type for a slice of objectResults, and implement sort.Interface
+// here to facilitate sorting by timestamp where needed
+type objectResults []objectResult
+
+func (ors objectResults) Len() int {
+	return len(ors)
+}
+
+func (ors objectResults) Less(i, j int) bool {
+	return ors[i].Timestamp.Before(ors[j].Timestamp)
+}
+
+func (ors objectResults) Swap(i, j int) {
+	ors[i], ors[j] = ors[j], ors[i]
 }
 
 // Describes an individual alert for a movement hit
