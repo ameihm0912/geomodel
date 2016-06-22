@@ -310,8 +310,9 @@ func (o *object) alertAnalyze() (err error) {
 	return nil
 }
 
-// Apply movement heuristic to results stored in object; returns true if we would have
-// generated an alert, or false otherwise
+// Apply movement heuristic to results stored in object; returns list of applicable
+// geocenters that are part of the alert if one was created, otherwise returns empty
+// slice
 func (o *object) analyzeUsageWithinWindow() (ret []objectResult, err error) {
 	defer func() {
 		if e := recover(); e != nil {
