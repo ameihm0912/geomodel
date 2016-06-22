@@ -22,7 +22,9 @@ type config struct {
 	}
 
 	Geo struct {
-		CollapseMaximum int // Maximum allowable collapse for branch locality (km)
+		CollapseMaximum  int    // Maximum allowable collapse for branch locality (km)
+		MovementWindow   string // time.Duration for movement heuristic
+		MovementDistance int    // Distance for movement heuristic (km)
 	}
 
 	MozDef struct {
@@ -98,6 +100,13 @@ func (c *config) validate() error {
 	_, err := time.ParseDuration(c.Timer.ExpireEvents)
 	if err != nil {
 		return err
+	}
+	_, err = time.ParseDuration(c.Geo.MovementWindow)
+	if err != nil {
+		return err
+	}
+	if c.Geo.MovementDistance < 500 {
+		return fmt.Errorf("geo..movementdistance must be >= 500")
 	}
 	return nil
 }

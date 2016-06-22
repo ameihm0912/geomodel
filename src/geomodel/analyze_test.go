@@ -229,6 +229,50 @@ var testtab6 = testTable{
 	},
 }
 
+var testtab7 = testTable{
+	{
+		phaseType: EVENT,
+		events: []testEvent{
+			{"user@host.com", "63.245.214.133", "", 15},
+		},
+	},
+	{
+		phaseType: EVENT,
+		events: []testEvent{
+			{"user@host.com", "207.126.102.129", "", 5},
+		},
+	},
+	{
+		phaseType: FUNC,
+		chkFunc:   testtab7Func,
+	},
+}
+
+var testtab8 = testTable{
+	{
+		phaseType: EVENT,
+		events: []testEvent{
+			{"user@host.com", "63.245.214.133", "", 15},
+		},
+	},
+	{
+		phaseType: EVENT,
+		events: []testEvent{
+			{"user@host.com", "118.163.10.187", "", 5},
+		},
+	},
+	{
+		phaseType: EVENT,
+		events: []testEvent{
+			{"user@host.com", "63.245.214.133", "", 15},
+		},
+	},
+	{
+		phaseType: FUNC,
+		chkFunc:   testtab8Func,
+	},
+}
+
 type simpleStateService struct {
 	store map[string]object
 }
@@ -328,6 +372,8 @@ func runTestTable(testtab testTable, t *testing.T) {
 func testGenericInit() error {
 	cfg.General.MaxMind = os.Getenv("TESTMMF")
 	cfg.Geo.CollapseMaximum = 500
+	cfg.Geo.MovementDistance = 2000
+	cfg.Geo.MovementWindow = "4h"
 	cfg.Timer.ExpireEvents = "720h"
 	cfg.noSendAlert = true
 	err := maxmindInit()
@@ -471,7 +517,7 @@ func testtab4FuncPre() error {
 			o = x
 			break
 		}
-		ad, err := v.createAlertDetails(o.BranchID)
+		ad, err := v.createAlertDetailsBranch(o.BranchID)
 		if err != nil {
 			return err
 		}
@@ -479,7 +525,19 @@ func testtab4FuncPre() error {
 		if err != nil {
 			return err
 		}
-		sumstr := ad.makeSummary()
+		err = ad.calculateSeverity()
+		if err != nil {
+			return err
+		}
+		// This is a new alert with no previous country details, so we should have
+		// a severity of 1
+		if ad.Severity != 1 {
+			return fmt.Errorf("alert had incorrect severity")
+		}
+		sumstr, err := ad.makeSummary()
+		if err != nil {
+			return err
+		}
 		if sumstr != testStr {
 			return fmt.Errorf("alert summary did not match")
 		}
@@ -516,7 +574,7 @@ func testtab4FuncPost() error {
 
 		// Locate the branch entry last created and validate alert
 		// generation
-		testStr := "user@host.com NEWLOCATION Taipei, Taiwan access from "
+		testStr := "user@host.com NEWCOUNTRY Taipei, Taiwan access from "
 		testStr += "118.163.10.187 (test) [deviation:12.5]"
 		testStr += " last activity was from San Francisco, United States "
 		testStr += "(10371 km away) within hour before"
@@ -531,7 +589,7 @@ func testtab4FuncPost() error {
 			o = x
 			break
 		}
-		ad, err := v.createAlertDetails(o.BranchID)
+		ad, err := v.createAlertDetailsBranch(o.BranchID)
 		if err != nil {
 			return err
 		}
@@ -539,7 +597,18 @@ func testtab4FuncPost() error {
 		if err != nil {
 			return err
 		}
-		sumstr := ad.makeSummary()
+		err = ad.calculateSeverity()
+		if err != nil {
+			return err
+		}
+		// A new country is present, so we should have a severity of 2
+		if ad.Severity != 2 {
+			return fmt.Errorf("alert had incorrect severity")
+		}
+		sumstr, err := ad.makeSummary()
+		if err != nil {
+			return err
+		}
 		if sumstr != testStr {
 			return fmt.Errorf("alert summary did not match")
 		}
@@ -634,6 +703,109 @@ func testtab6FuncFinal() error {
 	return nil
 }
 
+func testtab7Func() error {
+	s := getStateService().(*simpleStateService).getStore()
+	if len(s) != 1 {
+		return fmt.Errorf("more than one entry in state")
+	}
+	for _, v := range s {
+		if v.WeightDeviation == 0 {
+			return fmt.Errorf("weight threshold was 0")
+		}
+		if v.NumCenters != 2 {
+			return fmt.Errorf("incorrect number of geocenters")
+		}
+		collapseCnt := 0
+		for _, x := range v.Results {
+			if x.Collapsed {
+				collapseCnt++
+			}
+		}
+		if collapseCnt != 18 {
+			return fmt.Errorf("incorrect number of collapsed results")
+		}
+		for _, x := range v.Results {
+			if !x.Escalated {
+				return fmt.Errorf("a result entry was not escalated")
+			}
+		}
+
+		// Locate the branch entry last created and validate alert
+		// generation
+		testStr := "user@host.com NEWLOCATION Portland, United States access from "
+		testStr += "207.126.102.129 (test) [deviation:5]"
+		testStr += " last activity was from San Francisco, United States "
+		testStr += "(863 km away) within hour before"
+		var o objectResult
+		for _, x := range v.Results {
+			if x.Collapsed {
+				continue
+			}
+			if x.SourceIPV4 != "207.126.102.129" {
+				continue
+			}
+			o = x
+			break
+		}
+		ad, err := v.createAlertDetailsBranch(o.BranchID)
+		if err != nil {
+			return err
+		}
+		err = ad.addPreviousEvent(&v, o.BranchID)
+		if err != nil {
+			return err
+		}
+		err = ad.calculateSeverity()
+		if err != nil {
+			return err
+		}
+		// This was a locality change in the same country, we should have
+		// a severity of 1
+		if ad.Severity != 1 {
+			return fmt.Errorf("alert had incorrect severity")
+		}
+		sumstr, err := ad.makeSummary()
+		if err != nil {
+			return err
+		}
+		if sumstr != testStr {
+			return fmt.Errorf("alert summary did not match")
+		}
+	}
+	return nil
+}
+
+func testtab8Func() error {
+	s := getStateService().(*simpleStateService).getStore()
+	if len(s) != 1 {
+		return fmt.Errorf("more than one entry in state")
+	}
+	for _, v := range s {
+		alert, err := v.analyzeUsageWithinWindow()
+		if err != nil {
+			return err
+		}
+		if len(alert) == 0 {
+			return fmt.Errorf("analyzeUsageWithinWindow did not return results")
+		}
+		ad, err := v.createAlertDetailsMovement(alert)
+		if err != nil {
+			return err
+		}
+		sumstr, err := ad.makeSummary()
+		if err != nil {
+			return err
+		}
+		testStr := "user@host.com MOVEMENT window violation "
+		testStr += "(Taipei, Taiwan) -> (San Francisco, United States) "
+		testStr += "within 4h window"
+		if sumstr != testStr {
+			return fmt.Errorf("alert summary did not match")
+		}
+	}
+	return nil
+}
+
 func TestAnalyzeTab0(t *testing.T) {
 	runTestTable(testtab0, t)
 }
@@ -660,4 +832,12 @@ func TestAnalyzeTab5(t *testing.T) {
 
 func TestAnalyzeTab6(t *testing.T) {
 	runTestTable(testtab6, t)
+}
+
+func TestAnalyzeTab7(t *testing.T) {
+	runTestTable(testtab7, t)
+}
+
+func TestAnalyzeTab8(t *testing.T) {
+	runTestTable(testtab8, t)
 }
