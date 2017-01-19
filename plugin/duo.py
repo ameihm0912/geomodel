@@ -24,7 +24,7 @@ def procln(ev):
     if 'username' not in ev['details']:
         return ret
     ret['principal'] = ev['details']['username']
-    ret['source_ipv4'] = ev['details']['ip']
+    ret['source_ipv4'] = ev['details']['sourceipaddress']
     ret['valid'] = True
     return ret
 
