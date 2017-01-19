@@ -19,7 +19,7 @@ def procln(ev):
         return ret
     if 'details' not in ev:
         return ret
-    if 'ip' not in ev['details'] or ev['details']['ip'] == '0.0.0.0':
+    if 'sourceipaddress' not in ev['details'] or ev['details']['sourceipaddress'] == '0.0.0.0':
         return ret
     if 'username' not in ev['details']:
         return ret
