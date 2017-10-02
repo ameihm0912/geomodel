@@ -5,7 +5,7 @@ TESTMMF = $(shell pwd)/GeoIP2-City.mmdb
 all: $(TARGETS)
 
 test:
-	TESTMMF=$(TESTMMF) $(GO) test -v geomodel
+	TESTMMF=$(TESTMMF) $(GO) test -v github.com/ameihm0912/geomodel
 
 depends:
 	$(GO) get github.com/mattbaird/elastigo
