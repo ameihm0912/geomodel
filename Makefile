@@ -1,5 +1,5 @@
 TARGETS = geomodel
-GO = GOPATH=$(shell pwd):$(shell go env GOROOT)/bin go
+GO = go
 TESTMMF = $(shell pwd)/GeoIP2-City.mmdb
 
 all: $(TARGETS)
@@ -17,7 +17,7 @@ depends:
 	$(GO) get github.com/oschwald/geoip2-golang
 
 geomodel:
-	$(GO) install geomodel
+	$(GO) install github.com/ameihm0912/geomodel
 
 clean:
 	rm -f bin/*
