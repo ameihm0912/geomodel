@@ -1,6 +1,6 @@
 TARGETS = geomodel
 GO = go
-TESTMMF = $(shell pwd)/GeoIP2-City.mmdb
+TESTMMF = $(shell pwd)/GeoLite2-City.mmdb
 
 all: $(TARGETS)
 

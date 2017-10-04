@@ -522,7 +522,7 @@ func testtab4FuncPre() error {
 		}
 		// Locate the branch entry last created and validate alert
 		// generation
-		testStr := "user@host.com NEWLOCATION San Francisco, United States "
+		testStr := "user@host.com NEWLOCATION Mountain View, United States "
 		testStr += "access from 63.245.214.133 (test) [deviation:0],"
 		testStr += " no previous locations stored in window"
 		var o objectResult
@@ -598,8 +598,8 @@ func testtab4FuncPost() error {
 		// generation
 		testStr := "user@host.com NEWCOUNTRY Taipei, Taiwan access from "
 		testStr += "118.163.10.187 (test) [deviation:12.5]"
-		testStr += " last activity was from San Francisco, United States "
-		testStr += "(10371 km away) within hour before"
+		testStr += " last activity was from Mountain View, United States "
+		testStr += "(10423 km away) within hour before"
 		var o objectResult
 		for _, x := range v.Results {
 			if x.Collapsed {
@@ -757,10 +757,10 @@ func testtab7Func() error {
 
 		// Locate the branch entry last created and validate alert
 		// generation
-		testStr := "user@host.com NEWLOCATION Portland, United States access from "
+		testStr := "user@host.com NEWLOCATION Louisville, United States access from "
 		testStr += "207.126.102.129 (test) [deviation:5]"
-		testStr += " last activity was from San Francisco, United States "
-		testStr += "(863 km away) within hour before"
+		testStr += " last activity was from Mountain View, United States "
+		testStr += "(1490 km away) within hour before"
 		var o objectResult
 		for _, x := range v.Results {
 			if x.Collapsed {
@@ -822,7 +822,7 @@ func testtab8Func() error {
 			return err
 		}
 		testStr := "user@host.com MOVEMENT window violation "
-		testStr += "(Taipei, Taiwan) -> (San Francisco, United States) "
+		testStr += "(Taipei, Taiwan) -> (Mountain View, United States) "
 		testStr += "within 4h window"
 		if sumstr != testStr {
 			return fmt.Errorf("alert summary did not match")
