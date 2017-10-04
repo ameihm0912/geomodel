@@ -534,6 +534,9 @@ func testtab4FuncPre() error {
 		if ad.Severity != 1 {
 			return fmt.Errorf("alert had incorrect severity")
 		}
+		if ad.Category != "NEWLOCATION" {
+			return fmt.Errorf("alert had incorrect category")
+		}
 		sumstr, err := ad.makeSummary()
 		if err != nil {
 			return err
@@ -604,6 +607,9 @@ func testtab4FuncPost() error {
 		// A new country is present, so we should have a severity of 2
 		if ad.Severity != 2 {
 			return fmt.Errorf("alert had incorrect severity")
+		}
+		if ad.Category != "NEWCOUNTRY" {
+			return fmt.Errorf("alert had incorrect category")
 		}
 		sumstr, err := ad.makeSummary()
 		if err != nil {

@@ -515,6 +515,7 @@ func (ad *alertDetailsMovement) makeSummary() (string, error) {
 // Describes an individual alert for a branch
 type alertDetailsBranch struct {
 	Principal       string    `json:"principal"`
+	Category        string    `json:"category"`
 	Locality        Locality  `json:"locality_details"`
 	Latitude        float64   `json:"latitude"`
 	Longitude       float64   `json:"longitude"`
@@ -568,11 +569,13 @@ func (ad *alertDetailsBranch) calculateSeverity() error {
 	// Default to a severity value of 1, we will adjust up based on the
 	// outcome of this function.
 	ad.Severity = 1
+	ad.Category = "NEWLOCATION"
 
 	// If the previous country is a different country from this new alert,
 	// increase the severity.
 	if ad.PrevLocality.Country != "" {
 		if ad.PrevLocality.Country != ad.Locality.Country {
+			ad.Category = "NEWCOUNTRY"
 			ad.Severity++
 		}
 	}
