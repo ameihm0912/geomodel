@@ -88,6 +88,13 @@ func (o *object) addEventResult(e eventResult) (err error) {
 	if err != nil {
 		panic(err)
 	}
+
+	// If the country could not be geolocated (it is Unknown) don't merge this
+	// result into the model for this principal.
+	if newres.Locality.Country == "Unknown" {
+		return nil
+	}
+
 	o.Results = append(o.Results, newres)
 
 	return nil

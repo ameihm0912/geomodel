@@ -273,6 +273,25 @@ var testtab8 = testTable{
 	},
 }
 
+var testtab9 = testTable{
+	{
+		phaseType: EVENT,
+		events: []testEvent{
+			{"user@host.com", "63.245.214.133", "72h", 1},
+		},
+	},
+	{
+		phaseType: EVENT,
+		events: []testEvent{
+			{"user@host.com", "255.255.255.255", "", 1},
+		},
+	},
+	{
+		phaseType: FUNC,
+		chkFunc:   testtab9Func,
+	},
+}
+
 type simpleStateService struct {
 	store map[string]object
 }
@@ -812,6 +831,21 @@ func testtab8Func() error {
 	return nil
 }
 
+func testtab9Func() error {
+	s := getStateService().(*simpleStateService).getStore()
+	if len(s) != 1 {
+		return fmt.Errorf("more than one entry in state")
+	}
+	for _, v := range s {
+		// We should only have a single geocenter in the model since the unknown
+		// entry will have been discarded
+		if v.NumCenters != 1 {
+			return fmt.Errorf("incorrect number of geocenters")
+		}
+	}
+	return nil
+}
+
 func TestAnalyzeTab0(t *testing.T) {
 	runTestTable(testtab0, t)
 }
@@ -846,4 +880,8 @@ func TestAnalyzeTab7(t *testing.T) {
 
 func TestAnalyzeTab8(t *testing.T) {
 	runTestTable(testtab8, t)
+}
+
+func TestAnalyzeTab9(t *testing.T) {
+	runTestTable(testtab9, t)
 }
