@@ -36,7 +36,8 @@ func geoObjectResult(o *objectResult) (err error) {
 		}
 	}()
 
-	record, err := maxmind.City(net.ParseIP(o.SourceIPV4))
+	ip := net.ParseIP(o.SourceIPV4)
+	record, err := maxmind.City(ip)
 	if err != nil {
 		panic(err)
 	}
@@ -50,6 +51,18 @@ func geoObjectResult(o *objectResult) (err error) {
 	if countryName == "" {
 		countryName = "Unknown"
 	}
+
+	// Check if the ip is part of our custom overrides
+	for _, override := range cfg.overrides{
+		_, subnet, _ := net.ParseCIDR(override.CIDR)
+		if subnet.Contains(ip) {
+			cityName = override.City
+			countryName = override.Country
+			o.Latitude = override.Latitude
+			o.Longitude = override.Longitude
+		}
+	}
+
 	o.Locality.City = cityName
 	o.Locality.Country = countryName
 	o.Weight = 1

@@ -87,6 +87,7 @@ func main() {
 	var durstring = flag.String("b", "1h", "indicate how far to query back in plugin test")
 	var delIndex = flag.Bool("D", false, "delete and recreate state index on startup")
 	var confPath = flag.String("f", "etc/geomodel.conf", "configuration path")
+	var overridesPath = flag.String("r", "etc/overrides.conf", "configuration path of overrides file")
 	var nsAlert = flag.Bool("n", false, "dont send alerts to mozdef")
 	var initOff = flag.Int("o", 0, "initial state offset in seconds")
 	var pluginTest = flag.String("p", "", "test plugin; specify plugin name")
@@ -104,6 +105,9 @@ func main() {
 	if *eventIdx != "" {
 		cfg.ES.EventIndex = *eventIdx
 	}
+
+	overrides := readOverrides(*overridesPath)
+	cfg.overrides = overrides
 
 	// Initialize the logging routine
 	var wg sync.WaitGroup
