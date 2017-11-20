@@ -23,49 +23,44 @@ type override struct {
 	longitude float64
 }
 
-func readOverrides(path string) (overrides []override) {
+func readOverrides(path string) (overrides []override, err error) {
 	file, err := os.Open(path)
-	defer file.Close()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error opening file: %v\n", err)
-		return overrides
+		fmt.Fprintf(os.Stderr, "Error opening file: %v\n", err)
+		return nil, err
 	}
+	defer file.Close()
 
-	reader := bufio.NewReader(file)
-
-	var line string
-	for {
-		line, err = reader.ReadString('\n')
-		line_contents := strings.TrimSpace(line)
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line_contents := scanner.Text()
 		if strings.HasPrefix(line_contents, "#") {
 			// The line is a comment, so we'll skip it
 			continue
 		}
-		if line_contents == "" {
-			break
-		}
 
 		elements := strings.Split(line_contents, ",")
+		elements_len := len(elements)
+		if elements_len != 5 {
+			return nil, fmt.Errorf("Line must have 5 comma separated elements: %v", line_contents)
+		}
+
 		cidr := elements[0]
 		city := elements[1]
 		country := elements[2]
 		latitude, lat_err := strconv.ParseFloat(elements[3], 64)
 		if lat_err != nil {
-			fmt.Printf("Error converting latitude: %v\n", err)
-			continue
+			fmt.Fprintf(os.Stderr, "Error converting latitude: %v\n", lat_err)
+			return nil, lat_err
 		}
 		longitude, long_err := strconv.ParseFloat(elements[4], 64)
 		if long_err != nil {
-			fmt.Printf("Error converting longitude: %v\n", err)
-			continue
+			fmt.Fprintf(os.Stderr, "Error converting longitude: %v\n", long_err)
+			return nil, long_err
 		}
 
 		overrides = append(overrides, override{cidr, city, country, latitude, longitude})
-
-		if err != nil {
-			break
-		}
 	}
 
-	return overrides
+	return overrides, nil
 }

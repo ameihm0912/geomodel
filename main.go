@@ -106,7 +106,11 @@ func main() {
 		cfg.ES.EventIndex = *eventIdx
 	}
 
-	overrides := readOverrides(*overridesPath)
+	overrides, err := readOverrides(*overridesPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading overrides config file: %v\n", err)
+		os.Exit(2)
+	}
 	cfg.overrides = overrides
 
 	// Initialize the logging routine
