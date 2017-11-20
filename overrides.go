@@ -8,65 +8,64 @@
 package main
 
 import (
-  "fmt"
-  "os"
-  "bufio"
-  "strings"
-  "strconv"
+	"bufio"
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
 )
 
 type Override struct {
-  CIDR string
-  City string
-  Country string
-  Latitude float64
-  Longitude float64
+	CIDR      string
+	City      string
+	Country   string
+	Latitude  float64
+	Longitude float64
 }
 
+func readOverrides(path string) (overrides []Override) {
+	file, err := os.Open(path)
+	defer file.Close()
+	if err != nil {
+		fmt.Printf("error opening file: %v\n", err)
+		return overrides
+	}
 
-func readOverrides(path string) (overrides []Override){
-  file, err := os.Open(path)
-  defer file.Close()
-  if err != nil {
-    fmt.Printf("error opening file: %v\n",err)
-    return overrides
-  }
+	reader := bufio.NewReader(file)
 
-  reader := bufio.NewReader(file)
+	var line string
+	for {
+		line, err = reader.ReadString('\n')
+		line_contents := strings.TrimSpace(line)
+		if strings.HasPrefix(line_contents, "#") {
+			// The line is a comment, so we'll skip it
+			continue
+		}
+		if line_contents == "" {
+			break
+		}
 
-  var line string
-  for {
-    line, err = reader.ReadString('\n')
-    line_contents := strings.TrimSpace(line)
-    if strings.HasPrefix(line_contents, "#"){
-      // The line is a comment, so we'll skip it
-      continue
-    }
-    if line_contents == ""{
-      break
-    }
+		elements := strings.Split(line_contents, ",")
+		cidr := elements[0]
+		city := elements[1]
+		country := elements[2]
+		latitude, lat_err := strconv.ParseFloat(elements[3], 64)
+		if lat_err != nil {
+			fmt.Printf("Error converting latitude: %v\n", err)
+			continue
+		}
+		longitude, long_err := strconv.ParseFloat(elements[4], 64)
+		if long_err != nil {
+			fmt.Printf("Error converting longitude: %v\n", err)
+			continue
+		}
 
-    elements := strings.Split(line_contents, ",")
-    cidr := elements[0]
-    city := elements[1]
-    country := elements[2]
-    latitude, lat_err := strconv.ParseFloat(elements[3], 64)
-    if lat_err != nil {
-      fmt.Printf("Error converting latitude: %v\n",err)
-      continue
-    }
-    longitude, long_err := strconv.ParseFloat(elements[4], 64)
-    if long_err != nil {
-      fmt.Printf("Error converting longitude: %v\n",err)
-      continue
-    }
+		overrides = append(overrides, Override{cidr, city, country, latitude, longitude})
 
-    overrides = append(overrides, Override{cidr, city, country, latitude, longitude})
+		if err != nil {
+			break
+		}
+	}
 
-    if err != nil {
-      break
-    }
-  }
-
-  return overrides
+	return overrides
 }

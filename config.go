@@ -47,9 +47,9 @@ type config struct {
 
 	// Not expected to be in the configuration file, but other options we
 	// want to store as part of the configuration.
-	deleteStateIndex bool // Remove state index on startup
-	initialOffset    int  // If creating initial state, start from this far back (seconds)
-	noSendAlert      bool // Don't send alerts to MozDef
+	deleteStateIndex bool       // Remove state index on startup
+	initialOffset    int        // If creating initial state, start from this far back (seconds)
+	noSendAlert      bool       // Don't send alerts to MozDef
 	overrides        []Override // Keeps track of custom ip -> city,country overrides
 }
 
