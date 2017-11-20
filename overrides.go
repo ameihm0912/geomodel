@@ -27,7 +27,7 @@ func readOverrides(path string) (overrides []override) {
 	file, err := os.Open(path)
 	defer file.Close()
 	if err != nil {
-		fmt.Printf("error opening file: %v\n", err)
+		fmt.Fprintf(os.Stderr, "error opening file: %v\n", err)
 		return overrides
 	}
 
