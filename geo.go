@@ -60,6 +60,7 @@ func geoObjectResult(o *objectResult) (err error) {
 			countryName = override.country
 			o.Latitude = override.latitude
 			o.Longitude = override.longitude
+			break
 		}
 	}
 
