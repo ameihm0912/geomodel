@@ -15,15 +15,15 @@ import (
 	"strings"
 )
 
-type Override struct {
-	CIDR      string
-	City      string
-	Country   string
-	Latitude  float64
-	Longitude float64
+type override struct {
+	cidr      string
+	city      string
+	country   string
+	latitude  float64
+	longitude float64
 }
 
-func readOverrides(path string) (overrides []Override) {
+func readOverrides(path string) (overrides []override) {
 	file, err := os.Open(path)
 	defer file.Close()
 	if err != nil {
@@ -60,7 +60,7 @@ func readOverrides(path string) (overrides []Override) {
 			continue
 		}
 
-		overrides = append(overrides, Override{cidr, city, country, latitude, longitude})
+		overrides = append(overrides, override{cidr, city, country, latitude, longitude})
 
 		if err != nil {
 			break

@@ -50,7 +50,7 @@ type config struct {
 	deleteStateIndex bool       // Remove state index on startup
 	initialOffset    int        // If creating initial state, start from this far back (seconds)
 	noSendAlert      bool       // Don't send alerts to MozDef
-	overrides        []Override // Keeps track of custom ip -> city,country overrides
+	overrides        []override // Keeps track of custom ip -> city,country overrides
 }
 
 var cfg config

@@ -54,12 +54,12 @@ func geoObjectResult(o *objectResult) (err error) {
 
 	// Check if the ip is part of our custom overrides
 	for _, override := range cfg.overrides {
-		_, subnet, _ := net.ParseCIDR(override.CIDR)
+		_, subnet, _ := net.ParseCIDR(override.cidr)
 		if subnet.Contains(ip) {
-			cityName = override.City
-			countryName = override.Country
-			o.Latitude = override.Latitude
-			o.Longitude = override.Longitude
+			cityName = override.city
+			countryName = override.country
+			o.Latitude = override.latitude
+			o.Longitude = override.longitude
 		}
 	}
 
