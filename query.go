@@ -31,14 +31,14 @@ func queryUsingPlugin(p plugin, req queryRequest) (err error) {
 			"bool": {
 				"must": [
 				%v
-				]
-			}
-		},
-		"filter": {
-			"range": {
-				"utctimestamp": {
-					"from": "%v",
-					"to": "%v"
+				],
+				"filter": {
+					"range": {
+						"utctimestamp": {
+							"gte": "%v",
+							"lt": "%v"
+						}
+					}
 				}
 			}
 		}
