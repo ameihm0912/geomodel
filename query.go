@@ -36,7 +36,7 @@ func queryUsingPlugin(p plugin, req queryRequest) (err error) {
 					"range": {
 						"utctimestamp": {
 							"gte": "%v",
-							"lte": "%v"
+							"lt": "%v"
 						}
 					}
 				}
