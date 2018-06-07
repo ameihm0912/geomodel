@@ -2,9 +2,8 @@
 
 # @@ bmo
 # @T _type event
-# @T category syslog
-# @T details.program apache
-# @Q summary: \\[audit\\]
+# @T category audit
+# @T eventsource CEREAL
 # @Q summary: login
 
 import sys
