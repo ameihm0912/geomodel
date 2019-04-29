@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # @@ google
-# @T _type google
+# @T type google
 # @T category google
 
 import sys
