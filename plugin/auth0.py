@@ -21,7 +21,7 @@ def procln(ev):
 
     if 'details' not in ev:
         return ret
-    if 'type' not in ev['details'] or ev['details']['type'] not in SUCCESS_LOGIN_TEXTS:
+    if 'eventname' not in ev['details'] or ev['details']['eventname'] not in SUCCESS_LOGIN_TEXTS:
         return ret
 
     if 'sourceipaddress' not in ev['details'] or ev['details']['sourceipaddress'] == '0.0.0.0':
