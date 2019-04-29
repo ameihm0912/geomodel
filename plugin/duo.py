@@ -2,7 +2,7 @@
 
 # @@ duo
 # @T type event
-# @Q tags: (\"duosecurity\",\"logs\")
+# @Q tags: duosecurity
 
 import sys
 import json
@@ -15,7 +15,7 @@ def procln(ev):
     ret['timestamp'] = ev['utctimestamp']
     if 'summary' not in ev:
         return ret
-    if 'authentication SUCCESS' not in ev['summary']:
+    if 'authentication success' not in ev['summary'].lower():
         return ret
     if 'details' not in ev:
         return ret
