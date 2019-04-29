@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # @@ bmo
-# @T _type event
+# @T type event
 # @T category audit
 # @T eventsource CEREAL
 # @Q summary: login

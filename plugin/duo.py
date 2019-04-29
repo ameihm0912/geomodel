@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # @@ duo
-# @T _type event
+# @T type event
 # @Q tags: (\"duosecurity\",\"logs\")
 
 import sys

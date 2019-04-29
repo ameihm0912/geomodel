@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # @@ okta
-# @T _type okta
+# @T type okta
 # @T category okta
 
 import sys

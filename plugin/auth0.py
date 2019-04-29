@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # @@ auth0
-# @T _type event
+# @T type event
 # @Q tags: auth0
 
 import sys
